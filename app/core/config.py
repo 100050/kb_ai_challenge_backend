@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     app_env: Literal["local", "test", "production"] = "local"
     log_level: str = "INFO"
     api_v1_prefix: str = "/api/v1"
+    max_housing_plans: int = 10
 
     database_url: str
 

@@ -10,6 +10,7 @@ def test_settings_have_safe_local_defaults() -> None:
     assert settings.app_env == "local"
     assert settings.log_level == "INFO"
     assert settings.api_v1_prefix == "/api/v1"
+    assert settings.max_housing_plans == 10
     assert settings.ai_provider == "openai"
     assert settings.ai_model is None
     assert settings.ai_api_key is None

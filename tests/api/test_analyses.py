@@ -17,12 +17,11 @@ class FakeAnalysisService:
         analysis = AnalysisDetail(
             analysis_id=uuid4(),
             status="draft",
-            current_step="properties",
+            current_step="cash_flow",
             progress=0,
-            properties=None,
             cash_flow=None,
             financial_goals=None,
-            loan_plan=None,
+            housing_plans=[],
             created_at=now,
             updated_at=now,
         )
@@ -50,7 +49,7 @@ def test_create_analysis() -> None:
     body = response.json()
     assert UUID(body["analysis_id"])
     assert body["status"] == "draft"
-    assert body["current_step"] == "properties"
+    assert body["current_step"] == "cash_flow"
     assert body["progress"] == 0
     assert body["created_at"].endswith("Z")
 
@@ -71,10 +70,9 @@ def test_get_analysis() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["analysis_id"] == created["analysis_id"]
-    assert body["properties"] is None
     assert body["cash_flow"] is None
     assert body["financial_goals"] is None
-    assert body["loan_plan"] is None
+    assert body["housing_plans"] == []
     assert body["updated_at"].endswith("Z")
 
 

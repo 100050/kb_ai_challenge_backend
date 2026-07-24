@@ -1,8 +1,11 @@
 from datetime import datetime
-from typing import Any, Literal
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from app.schemas.analysis_input import CashFlow, FinancialGoals
+from app.schemas.housing_plan import HousingPlanSummary
 
 
 class AnalysisSummary(BaseModel):
@@ -26,17 +29,14 @@ class AnalysisSummary(BaseModel):
 
 
 class AnalysisDetail(AnalysisSummary):
-    properties: list[dict[str, Any]] | None = Field(
-        description="사용자가 비교할 후보 매물 목록. 입력 전에는 null",
-    )
-    cash_flow: dict[str, Any] | None = Field(
+    cash_flow: CashFlow | None = Field(
         description="월 소득, 생활비, 부채 상환액 등 현금 흐름. 입력 전에는 null",
     )
-    financial_goals: dict[str, Any] | None = Field(
+    financial_goals: FinancialGoals | None = Field(
         description="현재 자산, 저축 목표 등 재무 목표. 입력 전에는 null",
     )
-    loan_plan: dict[str, Any] | None = Field(
-        description="대출 금액, 금리, 기간 등 대출 계획. 입력 전에는 null",
+    housing_plans: list[HousingPlanSummary] = Field(
+        description="분석에 연결된 후보 매물 요약 목록",
     )
     updated_at: datetime = Field(
         description="분석 작업이나 입력값이 마지막으로 변경된 UTC 시각",

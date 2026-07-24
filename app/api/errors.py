@@ -64,3 +64,21 @@ class AnalysisNotFoundError(ApiError):
             code="ANALYSIS_NOT_FOUND",
             message="분석을 찾을 수 없습니다.",
         )
+
+
+class HousingPlanNotFoundError(ApiError):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=404,
+            code="HOUSING_PLAN_NOT_FOUND",
+            message="매물을 찾을 수 없습니다.",
+        )
+
+
+class HousingPlanLimitReachedError(ApiError):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=409,
+            code="HOUSING_PLAN_LIMIT_REACHED",
+            message="저장할 수 있는 최대 매물 수를 초과했습니다.",
+        )

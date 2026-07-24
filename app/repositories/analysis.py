@@ -19,6 +19,10 @@ class AnalysisRepository:
     async def get(self, analysis_id: UUID) -> Analysis | None:
         return await self.session.get(Analysis, analysis_id)
 
+    async def save(self, analysis: Analysis) -> None:
+        await self.session.commit()
+        await self.session.refresh(analysis)
+
     async def delete(self, analysis_id: UUID) -> bool:
         analysis = await self.get(analysis_id)
         if analysis is None:
