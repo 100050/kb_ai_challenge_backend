@@ -82,3 +82,22 @@ class HousingPlanLimitReachedError(ApiError):
             code="HOUSING_PLAN_LIMIT_REACHED",
             message="저장할 수 있는 최대 매물 수를 초과했습니다.",
         )
+
+
+class AnalysisNotReadyError(ApiError):
+    def __init__(self, details: list[dict[str, Any]]) -> None:
+        super().__init__(
+            status_code=409,
+            code="ANALYSIS_NOT_READY",
+            message="필수 입력이 완료되지 않았습니다.",
+            details=details,
+        )
+
+
+class EvaluationNotFoundError(ApiError):
+    def __init__(self) -> None:
+        super().__init__(
+            status_code=404,
+            code="EVALUATION_NOT_FOUND",
+            message="평가 결과를 찾을 수 없습니다.",
+        )

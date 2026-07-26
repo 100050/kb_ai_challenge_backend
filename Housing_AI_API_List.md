@@ -329,15 +329,15 @@
 
 저장된 입력을 검증하고 평가를 시작합니다.
 완성된 공통 입력과 1개 이상 N개 이하의 완성된 매물이 필요하며, 미완성 매물이 하나라도 남아 있으면 `409 ANALYSIS_NOT_READY`를 반환합니다.
-중복 실행 중이면 `409 Conflict`를 반환합니다.
+재무 계산은 외부 API 없이 결정론적으로 즉시 수행하고 결과를 PostgreSQL에 저장합니다.
 
 `202 Accepted`
 
 ```json
 {
-  "evaluation_id": "eval-7d590a34",
-  "status": "queued",
-  "progress": 0
+  "evaluation_id": "43ddb4d5-2872-40eb-9a44-f341c0b16275",
+  "status": "completed",
+  "progress": 100
 }
 ```
 
@@ -347,12 +347,12 @@
 
 ```json
 {
-  "evaluation_id": "eval-7d590a34",
-  "status": "processing",
-  "current_stage": "financial_suitability",
-  "progress": 60,
+  "evaluation_id": "43ddb4d5-2872-40eb-9a44-f341c0b16275",
+  "status": "completed",
+  "current_stage": "financial_management",
+  "progress": 100,
   "error": null,
-  "updated_at": "2026-07-23T03:30:00Z"
+  "updated_at": "2026-07-24T03:30:00Z"
 }
 ```
 
@@ -360,76 +360,63 @@
 
 ### `GET /analyses/{analysis_id}/evaluation/events`
 
-각 SSE 메시지는 `event`와 JSON `data`로 구성됩니다.
+현재 평가는 요청 안에서 즉시 완료되므로 저장된 완료 상태를 SSE로 전송하고 스트림을 종료합니다.
 
 ```text
-event: progress
-data: {"status":"processing","stage":"price_fairness","progress":30}
-
 event: completed
-data: {"status":"completed","progress":100}
+data: {"status":"completed","stage":"financial_management","progress":100}
 ```
-
-실패 시 `event: failed`를 전송하고 스트림을 종료합니다.
 
 ### `GET /analyses/{analysis_id}/result`
 
-평가가 끝나지 않았으면 `409 Conflict`를 반환합니다.
+평가 결과가 없으면 `404 EVALUATION_NOT_FOUND`를 반환합니다.
 
 `200 OK`
 
 ```json
 {
   "analysis_id": "550e8400-e29b-41d4-a716-446655440000",
-  "recommended_property_id": "bab7a2d4-d056-41f9-9f69-90a0bd7a72ac",
-  "summary": "신림 오피스텔이 월 부담과 비상자금 유지 측면에서 가장 적합합니다.",
   "candidates": [
     {
       "property_id": "43b49e66-0fa2-4e0d-aee6-2f6cbc827290",
-      "rank": 2,
-      "total_score": 72,
-      "price_fairness": {
-        "status": "reasonable",
-        "score": 76,
-        "comment": "입력된 조건에서 보증금과 월세가 허용 범위에 있습니다."
+      "name": "역삼 원룸",
+      "initial_funds": {
+        "initial_cash_required": 11600000,
+        "post_move_liquid_assets": 83400000,
+        "emergency_fund_gap": 73400000,
+        "status": "sufficient"
       },
-      "financial_suitability": {
-        "status": "caution",
-        "score": 68,
-        "monthly_housing_cost": 930000,
-        "monthly_surplus": 70000,
-        "debt_service_ratio": 5.7
+      "monthly_cash_flow": {
+        "monthly_housing_and_transport_cost": 930000,
+        "actual_monthly_balance": 370000,
+        "monthly_budget_margin": 70000,
+        "status": "sufficient"
       },
-      "initial_cash_required": 11600000,
-      "warnings": [
-        "목표 저축과 월 완충금 반영 후 잔여 현금이 70000원입니다."
-      ]
-    },
-    {
-      "property_id": "bab7a2d4-d056-41f9-9f69-90a0bd7a72ac",
-      "rank": 1,
-      "total_score": 84,
-      "price_fairness": {
-        "status": "reasonable",
-        "score": 82,
-        "comment": "전세 보증금 대비 예상 금융비용이 적정합니다."
+      "annual_goal": {
+        "annual_financial_target": 18400000,
+        "expected_resources_after_one_year": 96240000,
+        "annual_financial_surplus": 77840000,
+        "annual_goal_achievement_rate": 523.04,
+        "status": "above_target"
       },
-      "financial_suitability": {
-        "status": "suitable",
-        "score": 87,
-        "monthly_housing_cost": 601667,
-        "monthly_surplus": 398333,
-        "debt_service_ratio": 14.0
+      "calculation_details": {
+        "available_own_funds": 95000000,
+        "self_funded_deposit": 10000000,
+        "monthly_deposit_loan_interest": 0,
+        "monthly_housing_cash_outflow": 850000,
+        "base_monthly_balance": 1070000
       },
-      "initial_cash_required": 81900000,
       "warnings": []
     }
   ],
-  "generated_at": "2026-07-23T03:31:00Z"
+  "generated_at": "2026-07-24T03:31:00Z"
 }
 ```
 
-평가 수치와 순위는 결정론적 도메인 로직이 계산합니다. AI는 저장된 결과의 설명만 생성합니다.
+결과는 매물마다 초기자금·유동성, 월 현금흐름, 1년 재무목표의 세 카드를 제공합니다.
+임의 점수, 등급 또는 추천 순위는 계산하지 않습니다.
+보증금 대출 월 이자는 `대출액 × 연이자율 ÷ 100 ÷ 12`로 계산하고 원 단위에서 반올림합니다.
+초기자금이 부족해도 이후 계산은 계약 체결을 가정한 참고값으로 제공하며 `warnings`에 이를 표시합니다.
 
 ## 4. 챗봇
 

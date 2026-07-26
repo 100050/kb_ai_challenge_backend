@@ -1,4 +1,5 @@
 from app.models.analysis import Analysis
+from app.models.evaluation import Evaluation
 from app.models.housing_plan import HousingPlan
 
-__all__ = ["Analysis", "HousingPlan"]
+__all__ = ["Analysis", "Evaluation", "HousingPlan"]

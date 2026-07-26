@@ -4,6 +4,7 @@ from uuid import UUID
 from app.models.analysis import Analysis
 from app.models.housing_plan import HousingPlan
 from app.repositories.analysis import AnalysisRepository
+from app.repositories.evaluation import EvaluationRepository
 from app.repositories.housing_plan import HousingPlanRepository
 from app.schemas.analysis import AnalysisDetail, AnalysisSummary
 from app.schemas.analysis_input import (
@@ -33,11 +34,13 @@ class AnalysisService:
         self,
         repository: AnalysisRepository,
         housing_plan_repository: HousingPlanRepository,
+        evaluation_repository: EvaluationRepository,
         *,
         max_housing_plans: int,
     ) -> None:
         self.repository = repository
         self.housing_plan_repository = housing_plan_repository
+        self.evaluation_repository = evaluation_repository
         self.max_housing_plans = max_housing_plans
 
     async def create(self) -> AnalysisSummary:
@@ -68,6 +71,7 @@ class AnalysisService:
 
         plans = await self.housing_plan_repository.list(analysis_id)
         self._update_progress(analysis, plans)
+        await self.evaluation_repository.delete(analysis_id)
         await self.repository.save(analysis)
         return self._cash_flow_response(analysis)
 
@@ -85,6 +89,7 @@ class AnalysisService:
 
         plans = await self.housing_plan_repository.list(analysis_id)
         self._update_progress(analysis, plans)
+        await self.evaluation_repository.delete(analysis_id)
         await self.repository.save(analysis)
         return self._financial_goals_response(analysis)
 
@@ -105,6 +110,7 @@ class AnalysisService:
         self._apply_housing_plan_update(housing_plan, payload)
         plans.append(housing_plan)
         self._update_progress(analysis, plans)
+        await self.evaluation_repository.delete(analysis_id)
         await self.repository.save(analysis)
         return self._housing_plan_response(housing_plan)
 
@@ -150,6 +156,7 @@ class AnalysisService:
         self._apply_housing_plan_update(housing_plan, payload)
         plans = await self.housing_plan_repository.list(analysis_id)
         self._update_progress(analysis, plans)
+        await self.evaluation_repository.delete(analysis_id)
         await self.repository.save(analysis)
         return self._housing_plan_response(housing_plan)
 
@@ -171,6 +178,7 @@ class AnalysisService:
         await self.housing_plan_repository.delete(housing_plan)
         plans = await self.housing_plan_repository.list(analysis_id)
         self._update_progress(analysis, plans)
+        await self.evaluation_repository.delete(analysis_id)
         await self.repository.save(analysis)
         return True
 
@@ -255,6 +263,7 @@ class AnalysisService:
         else:
             analysis.current_step = "confirmation"
             analysis.progress = 100
+        analysis.status = "draft"
         analysis.updated_at = datetime.now(timezone.utc)
 
     @staticmethod
