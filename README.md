@@ -28,7 +28,8 @@ uv run fastapi dev main.py --port 8080
 - Swagger UI: `http://localhost:8080/docs`
 - OpenAPI JSON: `http://localhost:8080/openapi.json`
 
-현재 애플리케이션에는 기본 루트 엔드포인트만 구현되어 있습니다. 문서에 정의된 `/api/v1` 엔드포인트는 개발 과정에서 추가합니다.
+현재 애플리케이션에는 분석 입력, 후보 매물 CRUD, 재무평가 및 가격
+적정성 평가를 포함한 `/api/v1` 엔드포인트가 구현되어 있습니다.
 
 ## PostgreSQL 초기화
 
@@ -72,13 +73,16 @@ docker compose up -d db
 ```env
 DATABASE_URL=postgresql+asyncpg://housing_ai:local_dev_password@localhost:5432/housing_ai
 AI_API_KEY=
+DATA_GO_KR_API_KEY=
+R_ONE_API_KEY=
 ```
 
 운영에서는 `DATABASE_URL`을 AWS RDS PostgreSQL 주소로 교체합니다. Docker Compose는 로컬 개발에서만 사용합니다.
 
 ## 스키마 마이그레이션
 
-SQLAlchemy, asyncpg, Alembic은 아직 프로젝트 의존성에 추가되지 않았습니다. 도입 후에는 모든 테이블 변경을 Alembic revision으로 관리하고 다음 명령을 표준으로 사용합니다.
+SQLAlchemy, asyncpg, Alembic을 사용하며 모든 테이블 변경은 Alembic
+revision으로 관리합니다.
 
 ```bash
 uv run alembic upgrade head

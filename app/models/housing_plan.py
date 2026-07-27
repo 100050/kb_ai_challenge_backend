@@ -26,6 +26,19 @@ class HousingPlan(Base):
 
     name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     address: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    property_type: Mapped[str | None] = mapped_column(
+        String(30),
+        nullable=True,
+    )
+    legal_dong_code: Mapped[str | None] = mapped_column(
+        String(10),
+        nullable=True,
+        index=True,
+    )
+    exclusive_area_m2: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+    )
     housing_type: Mapped[str | None] = mapped_column(
         String(20),
         nullable=True,

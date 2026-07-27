@@ -15,6 +15,7 @@ from app.schemas.evaluation import (
     PropertyFinancialInput,
 )
 from app.services.financial_calculations import evaluate_property
+from app.services.market_price import MarketPriceService
 
 
 class AnalysisNotReady(Exception):
@@ -28,10 +29,12 @@ class EvaluationService:
         analysis_repository: AnalysisRepository,
         housing_plan_repository: HousingPlanRepository,
         evaluation_repository: EvaluationRepository,
+        market_price_service: MarketPriceService,
     ) -> None:
         self.analysis_repository = analysis_repository
         self.housing_plan_repository = housing_plan_repository
         self.evaluation_repository = evaluation_repository
+        self.market_price_service = market_price_service
 
     async def evaluate(self, analysis_id: UUID) -> EvaluationStarted | None:
         analysis = await self.analysis_repository.get(analysis_id)
@@ -43,12 +46,22 @@ class EvaluationService:
             raise AnalysisNotReady(details)
 
         common = self._common_input(analysis)
+        candidates = []
+        for plan in plans:
+            financial_result = evaluate_property(
+                common,
+                self._property_input(plan),
+            )
+            price_result = await self.market_price_service.evaluate_safely(plan)
+            candidates.append(
+                financial_result.model_copy(
+                    update={"price_appropriateness": price_result},
+                ),
+            )
+
         result = FinancialEvaluationResult(
             analysis_id=analysis_id,
-            candidates=[
-                evaluate_property(common, self._property_input(plan))
-                for plan in plans
-            ],
+            candidates=candidates,
             generated_at=datetime.now(timezone.utc),
         )
         evaluation = await self.evaluation_repository.save_completed(

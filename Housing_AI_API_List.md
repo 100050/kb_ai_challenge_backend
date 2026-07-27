@@ -174,6 +174,10 @@
 - 매물 조회, 수정 및 삭제 시 `analysis_id`와 `property_id`가 모두 일치해야 합니다.
 - 분석을 삭제하면 해당 분석에 연결된 모든 매물도 함께 삭제됩니다.
 - 구매는 고려하지 않으며 `housing_type`은 `jeonse`, `monthly_rent` 중 하나입니다.
+- `property_type`은 `apartment`, `row_house`, `multi_family`, `officetel`,
+  `detached_house`, `multi_household` 중 하나입니다.
+- `legal_dong_code`는 행정안전부 법정동 코드 API에서 얻은 10자리 코드입니다.
+- `exclusive_area_m2`는 가격 비교에 사용하는 제곱미터 단위 전용면적입니다.
 - `monthly_rent`는 전세인 경우 `0`입니다.
 - `utilities`는 관리비에 포함되지 않은 월 공과금입니다.
 - `transportation_cost`는 해당 매물에 입주했을 때 예상되는 월 교통비입니다.
@@ -207,6 +211,9 @@
   "property_id": "43b49e66-0fa2-4e0d-aee6-2f6cbc827290",
   "name": "역삼 원룸",
   "address": null,
+  "property_type": null,
+  "legal_dong_code": null,
+  "exclusive_area_m2": null,
   "housing_type": null,
   "deposit": null,
   "monthly_rent": null,
@@ -267,6 +274,9 @@
 {
   "name": "역삼 원룸",
   "address": "서울특별시 강남구 역삼동",
+  "property_type": "apartment",
+  "legal_dong_code": "1168010100",
+  "exclusive_area_m2": 59.8,
   "housing_type": "monthly_rent",
   "deposit": 10000000,
   "monthly_rent": 700000,
@@ -293,6 +303,9 @@
   "property_id": "43b49e66-0fa2-4e0d-aee6-2f6cbc827290",
   "name": "역삼 원룸",
   "address": "서울특별시 강남구 역삼동",
+  "property_type": "apartment",
+  "legal_dong_code": "1168010100",
+  "exclusive_area_m2": 59.8,
   "housing_type": "monthly_rent",
   "deposit": 10000000,
   "monthly_rent": 700000,
@@ -329,7 +342,10 @@
 
 저장된 입력을 검증하고 평가를 시작합니다.
 완성된 공통 입력과 1개 이상 N개 이하의 완성된 매물이 필요하며, 미완성 매물이 하나라도 남아 있으면 `409 ANALYSIS_NOT_READY`를 반환합니다.
-재무 계산은 외부 API 없이 결정론적으로 즉시 수행하고 결과를 PostgreSQL에 저장합니다.
+재무 계산은 결정론적으로 수행합니다. 가격 적정성은 법정동 코드,
+실거래가 및 전월세전환율 API를 이용하고 결과를 함께 PostgreSQL에
+저장합니다. 외부 API 오류는 재무 계산을 실패시키지 않으며 해당 매물의
+가격 적정성만 `unavailable`로 반환합니다.
 
 `202 Accepted`
 
@@ -399,6 +415,14 @@ data: {"status":"completed","stage":"financial_management","progress":100}
         "annual_goal_achievement_rate": 523.04,
         "status": "above_target"
       },
+      "price_appropriateness": {
+        "status": "available",
+        "median_equivalent_monthly_cost": 880000,
+        "difference_from_median": 40000,
+        "difference_rate_from_median": 4.55,
+        "price_percentile": 72.2,
+        "reason": null
+      },
       "calculation_details": {
         "available_own_funds": 95000000,
         "self_funded_deposit": 10000000,
@@ -414,6 +438,12 @@ data: {"status":"completed","stage":"financial_management","progress":100}
 ```
 
 결과는 매물마다 초기자금·유동성, 월 현금흐름, 1년 재무목표의 세 카드를 제공합니다.
+가격 비교가 가능한 매물에는 비교군의 환산 월 임대비용 중앙값,
+중앙값과의 가격 차액·차이율 및 백분위를 추가로 제공합니다.
+백분위는 `후보 매물 이하 비교군 수 ÷ 전체 비교군 수 × 100`입니다.
+필요한 비교 필드가 없거나 외부 데이터를 구하지 못하면
+`price_appropriateness.status`는 `unavailable`이고 `reason`에 원인이
+들어갑니다.
 임의 점수, 등급 또는 추천 순위는 계산하지 않습니다.
 보증금 대출 월 이자는 `대출액 × 연이자율 ÷ 100 ÷ 12`로 계산하고 원 단위에서 반올림합니다.
 초기자금이 부족해도 이후 계산은 계약 체결을 가정한 참고값으로 제공하며 `warnings`에 이를 표시합니다.

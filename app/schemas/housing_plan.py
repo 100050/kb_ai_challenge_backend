@@ -7,6 +7,16 @@ from pydantic import BaseModel, Field
 
 Money = Annotated[int, Field(ge=0)]
 InterestRate = Annotated[float, Field(ge=0)]
+Area = Annotated[float, Field(gt=0)]
+LegalDongCode = Annotated[str, Field(pattern=r"^\d{10}$")]
+PropertyType = Literal[
+    "apartment",
+    "row_house",
+    "multi_family",
+    "officetel",
+    "detached_house",
+    "multi_household",
+]
 
 
 class LoanPlan(BaseModel):
@@ -23,6 +33,9 @@ class AdditionalCosts(BaseModel):
 class HousingPlanUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=100)
     address: str | None = Field(default=None, min_length=1, max_length=255)
+    property_type: PropertyType | None = None
+    legal_dong_code: LegalDongCode | None = None
+    exclusive_area_m2: Area | None = None
     housing_type: Literal["jeonse", "monthly_rent"] | None = None
     deposit: Money | None = None
     monthly_rent: Money | None = None
@@ -42,6 +55,9 @@ class HousingPlanResponse(BaseModel):
     property_id: UUID
     name: str | None
     address: str | None
+    property_type: PropertyType | None = None
+    legal_dong_code: str | None = None
+    exclusive_area_m2: float | None = None
     housing_type: Literal["jeonse", "monthly_rent"] | None
     deposit: int | None
     monthly_rent: int | None

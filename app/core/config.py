@@ -23,6 +23,12 @@ class Settings(BaseSettings):
     ai_model: str | None = None
     ai_api_key: SecretStr | None = None
 
+    data_go_kr_api_key: SecretStr | None = None
+    r_one_api_key: SecretStr | None = None
+    real_estate_api_timeout_seconds: float = 5.0
+    real_estate_lookback_months: int = 12
+    comparable_area_tolerance_percent: float = 10.0
+
     cors_origins: list[str] = ["http://localhost:3000"]
 
 

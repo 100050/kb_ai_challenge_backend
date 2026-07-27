@@ -76,12 +76,22 @@ class EvaluationWarning(BaseModel):
     message: str
 
 
+class PriceAppropriatenessResult(BaseModel):
+    status: Literal["available", "unavailable"]
+    median_equivalent_monthly_cost: int | None = None
+    difference_from_median: int | None = None
+    difference_rate_from_median: float | None = None
+    price_percentile: float | None = None
+    reason: str | None = None
+
+
 class PropertyFinancialEvaluation(BaseModel):
     property_id: UUID
     name: str
     initial_funds: InitialFundsResult
     monthly_cash_flow: MonthlyCashFlowResult
     annual_goal: AnnualGoalResult
+    price_appropriateness: PriceAppropriatenessResult | None = None
     calculation_details: CalculationDetails
     warnings: list[EvaluationWarning]
 
