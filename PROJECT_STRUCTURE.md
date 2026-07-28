@@ -52,12 +52,9 @@ backend/
 │   │
 │   └── ai/
 │       ├── __init__.py
-│       ├── ports.py
-│       ├── schemas.py
+│       ├── dependencies.py
 │       ├── agent.py
-│       └── adapters/
-│           ├── __init__.py
-│           └── provider.py
+│       └── model_factory.py
 │
 ├── tests/
 │   ├── conftest.py
@@ -101,7 +98,7 @@ backend/
 - `app/models/`: SQLAlchemy 영속성 모델
 - `app/repositories/`: PostgreSQL 조회 및 저장
 - `app/services/`: 분석 흐름과 결정론적 금융 계산
-- `app/ai/`: AI 에이전트, 구조화 출력, 제공자별 어댑터
+- `app/ai/`: Pydantic AI 에이전트, 타입 지정 의존성, AI 모델 생성
 - `tests/unit/`: DB나 외부 AI 없이 실행되는 도메인 단위 테스트
 - `tests/api/`: FastAPI 요청, 응답 및 유효성 검사 테스트
 - `tests/integration/`: 저장소, 트랜잭션, 마이그레이션 및 SSE 통합 테스트
@@ -115,8 +112,8 @@ API router
         ├── repository
         │   └── database
         ├── deterministic financial calculation
-        └── AI port
-            └── provider adapter
+        └── Pydantic AI agent
+            └── model factory
 ```
 
 라우터는 요청 검증과 응답 처리만 담당하고 비즈니스 로직은 서비스에 위임한다.

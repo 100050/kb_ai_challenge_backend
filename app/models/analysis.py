@@ -9,6 +9,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db import Base
 
 if TYPE_CHECKING:
+    from app.models.conversation import Conversation
     from app.models.housing_plan import HousingPlan
 
 
@@ -84,6 +85,13 @@ class Analysis(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
         lazy="selectin",
+    )
+
+    conversation: Mapped["Conversation | None"] = relationship(
+        back_populates="analysis",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        uselist=False,
     )
 
     # 분석 작업이 최초 생성된 UTC 시각

@@ -8,11 +8,11 @@
 - 금액 단위: 원(KRW), 소수점 없는 정수
 - 비율 단위: 퍼센트(%), 예: `3.5`는 연 3.5%
 - 날짜와 시간: ISO 8601 UTC 문자열
-- 아직 구현 전인 초안 계약이며 개발 중 변경 시 프론트엔드와 함께 갱신합니다.
+- 현재 백엔드 구현을 기준으로 작성한 계약이며 변경 시 프론트엔드와 함께 갱신합니다.
 
 ## 공통 오류 응답
 
-모든 오류는 같은 형태를 사용합니다.
+일반 JSON API의 오류는 같은 형태를 사용합니다.
 
 ```json
 {
@@ -30,6 +30,48 @@
 ```
 
 주요 상태 코드는 `400` 잘못된 요청, `404` 분석 없음, `409` 현재 상태와 충돌, `422` 필드 검증 실패, `500` 서버 오류입니다.
+
+단, 챗봇 메시지 API는 SSE 연결을 먼저 수립하므로 메시지 처리 중 발생한
+오류를 HTTP 오류 응답 대신 `event: error`로 전달할 수 있습니다.
+
+```text
+event: error
+data: {"code":"ANALYSIS_NOT_FOUND"}
+```
+
+### 공통 입력 검증
+
+- 모든 금액: `0` 이상의 정수
+- 연이자율: `0` 이상의 숫자이며 `3.5`는 연 3.5%를 의미
+- 전용면적: `0`보다 큰 숫자, 단위는 ㎡
+- 법정동 코드: 숫자로 이루어진 10자리 문자열
+- 매물 이름: 1~100자
+- 주소: 1~255자
+- 챗봇 메시지: 1~4000자
+
+### 상태값
+
+| 구분 | 값 |
+| --- | --- |
+| 분석 상태 | `draft`, `evaluating`, `completed`, `failed` |
+| 입력 단계 | `cash_flow`, `financial_goals`, `housing_plan`, `confirmation` |
+| 초기자금 상태 | `insufficient_initial_funds`, `emergency_fund_shortfall`, `sufficient` |
+| 월 현금흐름 상태 | `essential_expense_deficit`, `savings_target_shortfall`, `safety_margin_shortfall`, `sufficient` |
+| 1년 재무목표 상태 | `below_target`, `target_met`, `above_target` |
+| 가격 적정성 상태 | `available`, `unavailable` |
+| 챗봇 응답 상태 | `completed`, `approval_required`, `failed` |
+
+### `GET /health`
+
+백엔드 API가 요청을 받을 수 있는지 확인합니다.
+
+`200 OK`
+
+```json
+{
+  "status": "ok"
+}
+```
 
 ## 1. 분석 생성 및 조회
 
@@ -65,9 +107,7 @@
   "cash_flow": {
     "after_tax_monthly_income": 3500000,
     "monthly_living_expenses_excluding_housing_and_transport": 1300000,
-    "existing_loan_monthly_payment": 200000,
-    "target_monthly_savings": 700000,
-    "monthly_safety_margin": 300000
+    "existing_loan_monthly_payment": 200000
   },
   "financial_goals": null,
   "housing_plans": [],
@@ -169,14 +209,18 @@
 3단계의 후보 매물은 분석에 종속된 별도 리소스로 저장합니다.
 
 - 하나의 분석은 0개 이상의 임시 매물을 저장할 수 있습니다.
-- 평가를 시작하려면 완성된 매물이 1개 이상 N개 이하이어야 합니다. N은 서비스에서 정한 최대 비교 가능 매물 수입니다.
+- 하나의 분석에 저장할 수 있는 매물은 최대 10개입니다.
+- 평가를 시작하려면 완성된 매물이 1개 이상 10개 이하이어야 합니다.
 - 서버가 매물을 생성할 때 UUID 형식의 `property_id`를 발급합니다.
 - 매물 조회, 수정 및 삭제 시 `analysis_id`와 `property_id`가 모두 일치해야 합니다.
 - 분석을 삭제하면 해당 분석에 연결된 모든 매물도 함께 삭제됩니다.
 - 구매는 고려하지 않으며 `housing_type`은 `jeonse`, `monthly_rent` 중 하나입니다.
 - `property_type`은 `apartment`, `row_house`, `multi_family`, `officetel`,
   `detached_house`, `multi_household` 중 하나입니다.
-- `legal_dong_code`는 행정안전부 법정동 코드 API에서 얻은 10자리 코드입니다.
+- `legal_dong_code`는 행정안전부 법정동 코드 API에서 얻은 10자리
+  코드입니다. 현재 백엔드는 법정동 검색 API를 별도로 제공하지 않으므로
+  프론트엔드는 주소 선택 결과와 함께 확보한 코드를 이 필드로 전달해야
+  합니다.
 - `exclusive_area_m2`는 가격 비교에 사용하는 제곱미터 단위 전용면적입니다.
 - `monthly_rent`는 전세인 경우 `0`입니다.
 - `utilities`는 관리비에 포함되지 않은 월 공과금입니다.
@@ -185,6 +229,9 @@
 - 보증금 대출은 만기일시상환 방식만 고려합니다. 대출원금은 월 현금유출에 포함하지 않고 월 이자만 반영합니다.
 - 대출을 사용하지 않는 매물은 `loan_plan.deposit_loan_amount`와 `loan_plan.annual_interest_rate`를 모두 `0`으로 입력합니다.
 - `name`, `address`, `housing_type`, 모든 비용 필드, `loan_plan`, `additional_costs`가 유효하게 입력되면 `is_complete`가 `true`가 됩니다.
+- `property_type`, `legal_dong_code`, `exclusive_area_m2`가 없어도 재무
+  평가는 실행할 수 있지만 해당 매물의 가격 적정성은 `unavailable`이 될
+  수 있습니다.
 
 매물 초안이 하나라도 미완성 상태이면 `current_step`은 `housing_plan`, `progress`는 `67`입니다.
 1개 이상의 모든 저장 매물이 완성되면 `current_step`은 `confirmation`, `progress`는 `100`입니다.
@@ -192,8 +239,10 @@
 #### `POST /analyses/{analysis_id}/housing-plans`
 
 분석에 연결된 매물 초안을 생성합니다. 서버가 `property_id`를 발급하므로 요청에 ID를 포함하지 않습니다.
-임시저장을 위해 요청 본문은 비어 있거나 일부 필드만 포함할 수 있습니다.
-저장된 매물이 N개이면 `409 HOUSING_PLAN_LIMIT_REACHED`를 반환합니다.
+임시저장을 위해 요청 본문은 빈 JSON 객체 `{}`이거나 일부 필드만 포함할
+수 있습니다. 요청 본문 자체를 생략하면 `422 VALIDATION_ERROR`를
+반환합니다.
+저장된 매물이 10개이면 `409 HOUSING_PLAN_LIMIT_REACHED`를 반환합니다.
 
 요청:
 
@@ -341,7 +390,11 @@
 ### `POST /analyses/{analysis_id}/evaluation`
 
 저장된 입력을 검증하고 평가를 시작합니다.
-완성된 공통 입력과 1개 이상 N개 이하의 완성된 매물이 필요하며, 미완성 매물이 하나라도 남아 있으면 `409 ANALYSIS_NOT_READY`를 반환합니다.
+완성된 공통 입력과 1개 이상 10개 이하의 완성된 매물이 필요하며,
+미완성 매물이 하나라도 남아 있으면 `409 ANALYSIS_NOT_READY`를
+반환합니다.
+보증금 대출액이 보증금을 초과한 매물이 있어도
+`409 ANALYSIS_NOT_READY`를 반환합니다.
 재무 계산은 결정론적으로 수행합니다. 가격 적정성은 법정동 코드,
 실거래가 및 전월세전환율 API를 이용하고 결과를 함께 PostgreSQL에
 저장합니다. 외부 API 오류는 재무 계산을 실패시키지 않으며 해당 매물의
@@ -456,7 +509,7 @@ data: {"status":"completed","stage":"financial_management","progress":100}
 
 ```json
 {
-  "message": "추천 매물을 선택한 이유를 쉽게 설명해 줘."
+  "content": "각 매물의 재무 결과를 쉽게 설명해 줘."
 }
 ```
 
@@ -464,17 +517,71 @@ data: {"status":"completed","stage":"financial_management","progress":100}
 
 ```text
 event: message_start
-data: {"message_id":"msg-a831","role":"assistant"}
+data: {"analysis_id":"6b5a52cd-b081-4c38-97e2-1d8b0711cd82"}
 
 event: message_delta
-data: {"message_id":"msg-a831","content":"신림 오피스텔은 "}
-
-event: message_delta
-data: {"message_id":"msg-a831","content":"매달 남는 금액이 더 많습니다."}
+data: {"content":"저장된 재무 분석 결과를 설명합니다."}
 
 event: message_end
-data: {"message_id":"msg-a831","created_at":"2026-07-23T03:40:00Z"}
+data: {"turn_id":"...","role":"assistant","content":"...","status":"completed","pending_approvals":[],"created_at":"2026-07-27T03:40:00Z"}
 ```
+
+Pydantic AI의 전체 메시지 이력은 PostgreSQL에 저장됩니다. 사용자가
+나중에 다시 접속해 메시지를 보내면 저장된 이력을 복원하여 같은 대화를
+계속합니다.
+
+사용자가 소득·생활비, 자산·재무목표 또는 매물별 입력 변경을 요청하면
+에이전트는 수정 Tool을 제안합니다. 수정 Tool은 바로 실행되지 않고 다음
+`approval_required` 이벤트를 반환합니다.
+
+```text
+event: approval_required
+data: {"turn_id":"4d694b39-e6e3-4ce2-a893-d54319a62c6f","role":"assistant","content":null,"status":"approval_required","pending_approvals":[{"tool_call_id":"update-income","tool_name":"update_cash_flow","arguments":{"after_tax_monthly_income":4000000}}],"created_at":"2026-07-27T03:40:00Z"}
+
+event: message_end
+data: {"turn_id":"4d694b39-e6e3-4ce2-a893-d54319a62c6f","role":"assistant","content":null,"status":"approval_required","pending_approvals":[{"tool_call_id":"update-income","tool_name":"update_cash_flow","arguments":{"after_tax_monthly_income":4000000}}],"created_at":"2026-07-27T03:40:00Z"}
+```
+
+프론트엔드는 `approval_required` 이벤트에서 변경 전 확인 UI를 표시하고
+뒤이어 오는 `message_end` 이벤트에서 현재 SSE 연결을 종료 처리합니다.
+
+### `POST /analyses/{analysis_id}/chat/approvals`
+
+요청:
+
+```json
+{
+  "turn_id": "4d694b39-e6e3-4ce2-a893-d54319a62c6f",
+  "tool_call_id": "update-income",
+  "approved": true
+}
+```
+
+승인된 경우 기존 단계별 PATCH와 동일한 서비스 및 검증을 사용하여
+입력된 필드만 수정합니다. 입력 변경으로 기존 평가 결과는 삭제되며
+새 결과를 보려면 평가 API를 다시 실행해야 합니다. 거절하면 입력은
+변경되지 않고 대화를 계속합니다.
+
+`200 OK`:
+
+```json
+{
+  "turn_id": "4d694b39-e6e3-4ce2-a893-d54319a62c6f",
+  "role": "assistant",
+  "content": "월 소득을 400만 원으로 변경했습니다.",
+  "status": "completed",
+  "pending_approvals": [],
+  "created_at": "2026-07-27T03:40:00Z"
+}
+```
+
+한 응답에 처리되지 않은 다른 Tool 호출이 남아 있으면 `status`가 다시
+`approval_required`이고 `pending_approvals`에 다음 승인 대상이
+포함될 수 있습니다.
+
+- 분석을 찾을 수 없으면 `404 ANALYSIS_NOT_FOUND`
+- 해당 대화에서 처리할 승인 요청을 찾을 수 없으면
+  `404 PENDING_APPROVAL_NOT_FOUND`
 
 ### `GET /analyses/{analysis_id}/chat/messages`
 
@@ -482,18 +589,14 @@ data: {"message_id":"msg-a831","created_at":"2026-07-23T03:40:00Z"}
 
 ```json
 {
+  "conversation_id": "4c48783c-1723-49b6-b39f-419ace3622ac",
   "messages": [
     {
-      "message_id": "msg-a830",
-      "role": "user",
-      "content": "추천 매물을 선택한 이유를 쉽게 설명해 줘.",
-      "created_at": "2026-07-23T03:39:58Z"
-    },
-    {
-      "message_id": "msg-a831",
-      "role": "assistant",
-      "content": "신림 오피스텔은 매달 남는 금액이 더 많습니다.",
-      "created_at": "2026-07-23T03:40:00Z"
+      "turn_id": "4d694b39-e6e3-4ce2-a893-d54319a62c6f",
+      "user_content": "각 매물의 재무 결과를 설명해 줘.",
+      "assistant_content": "저장된 재무 분석 결과를 설명합니다.",
+      "status": "completed",
+      "created_at": "2026-07-27T03:40:00Z"
     }
   ]
 }
