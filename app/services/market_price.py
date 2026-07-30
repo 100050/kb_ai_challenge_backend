@@ -27,8 +27,8 @@ class MarketPriceService:
         rent_client: RentTransactionClient,
         r_one_client: ROneClient,
         *,
-        lookback_months: int = 12,
-        area_tolerance_percent: float = 10,
+        lookback_months: int = 24,
+        area_tolerance_percent: float = 15,
     ) -> None:
         self.legal_dong_client = legal_dong_client
         self.rent_client = rent_client

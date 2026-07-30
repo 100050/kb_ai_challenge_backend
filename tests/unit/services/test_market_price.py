@@ -49,6 +49,19 @@ class FakeROneClient:
         return Decimal("5") if year_month == "202607" else None
 
 
+def test_market_price_uses_twenty_four_months_and_fifteen_percent_area_by_default(
+) -> None:
+    service = MarketPriceService(
+        FakeLegalDongClient(),
+        FakeRentClient(),
+        FakeROneClient(),
+    )
+
+    assert service.lookback_months == 24
+    assert service.area_tolerance_percent == 15
+    assert len(service._recent_months(date(2026, 7, 1), 24)) == 24
+
+
 def test_market_price_filters_similar_area_and_returns_metrics() -> None:
     service = MarketPriceService(
         FakeLegalDongClient(),

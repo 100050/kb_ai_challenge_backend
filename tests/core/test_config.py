@@ -14,4 +14,7 @@ def test_settings_have_safe_local_defaults() -> None:
     assert settings.ai_provider == "openai"
     assert settings.ai_model is None
     assert settings.ai_api_key is None
-    assert settings.cors_origins == ["http://localhost:3000"]
+    assert settings.cors_origins == [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
