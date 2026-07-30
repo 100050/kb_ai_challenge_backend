@@ -11,6 +11,9 @@ def test_parse_apartment_rent_transactions_normalizes_xml() -> None:
         <전용면적>59.8</전용면적>
         <계약년월>202506</계약년월>
         <계약일>15</계약일>
+        <aptNm>테스트 아파트</aptNm>
+        <umdNm>역삼동</umdNm>
+        <jibun>123-4</jibun>
       </item></items></body>
     </response>
     """
@@ -22,4 +25,6 @@ def test_parse_apartment_rent_transactions_normalizes_xml() -> None:
     assert result[0].monthly_rent == 700_000
     assert result[0].exclusive_area_m2 == 59.8
     assert result[0].contract_date.isoformat() == "2025-06-15"
-
+    assert result[0].property_name == "테스트 아파트"
+    assert result[0].legal_dong_name == "역삼동"
+    assert result[0].jibun == "123-4"

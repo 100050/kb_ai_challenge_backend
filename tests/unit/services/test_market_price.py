@@ -107,12 +107,18 @@ class SmallFakeRentClient:
                 monthly_rent=700_000,
                 exclusive_area_m2=58,
                 contract_date=date(2026, 7, 1),
+                property_name="비교 아파트 A",
+                legal_dong_name="역삼동",
+                jibun="123-4",
             ),
             RentTransaction(
                 deposit=20_000_000,
                 monthly_rent=800_000,
                 exclusive_area_m2=62,
                 contract_date=date(2026, 7, 2),
+                property_name="비교 아파트 B",
+                legal_dong_name="도곡동",
+                jibun="55",
             ),
         ]
 
@@ -144,8 +150,11 @@ def test_market_price_returns_all_values_when_samples_are_under_ten() -> None:
     assert result.difference_from_median is None
     assert result.difference_rate_from_median is None
     assert result.price_percentile is None
+    assert result.candidate_equivalent_monthly_cost == 900_000
     assert [sample.model_dump() for sample in result.samples] == [
         {
+            "name": "비교 아파트 A",
+            "address": "서울특별시 강남구 역삼동 123-4",
             "deposit": 10_000_000,
             "monthly_rent": 700_000,
             "exclusive_area_m2": 58.0,
@@ -153,6 +162,8 @@ def test_market_price_returns_all_values_when_samples_are_under_ten() -> None:
             "equivalent_monthly_cost": 741_667,
         },
         {
+            "name": "비교 아파트 B",
+            "address": "서울특별시 강남구 도곡동 55",
             "deposit": 20_000_000,
             "monthly_rent": 800_000,
             "exclusive_area_m2": 62.0,

@@ -2,7 +2,10 @@ import asyncio
 from datetime import date
 from decimal import Decimal
 
-from app.clients.legal_dong import LegalDongClient
+from app.clients.legal_dong import (
+    LegalDongClient,
+    normalize_legal_dong_address,
+)
 from app.clients.r_one import ROneClient
 from app.clients.real_estate import RentTransactionClient
 from app.models.housing_plan import HousingPlan
@@ -107,12 +110,25 @@ class MarketPriceService:
 
         sample_count = len(comparable_transactions)
         if sample_count < MINIMUM_MEDIAN_SAMPLE_COUNT:
+            annual_conversion_rate = Decimal(conversion_rate)
+            district_address = self._district_address(plan.address)
             return PriceAppropriatenessResult(
                 status="available",
                 sample_count=sample_count,
                 comparison_mode="individual_samples",
+                candidate_equivalent_monthly_cost=equivalent_monthly_cost(
+                    deposit=plan.deposit,
+                    monthly_rent=plan.monthly_rent,
+                    annual_conversion_rate=annual_conversion_rate,
+                ),
                 samples=[
                     PriceComparableSample(
+                        name=item.property_name,
+                        address=self._sample_address(
+                            district_address,
+                            item.legal_dong_name,
+                            item.jibun,
+                        ),
                         deposit=item.deposit,
                         monthly_rent=item.monthly_rent,
                         exclusive_area_m2=item.exclusive_area_m2,
@@ -120,7 +136,7 @@ class MarketPriceService:
                         equivalent_monthly_cost=equivalent_monthly_cost(
                             deposit=item.deposit,
                             monthly_rent=item.monthly_rent,
-                            annual_conversion_rate=Decimal(conversion_rate),
+                            annual_conversion_rate=annual_conversion_rate,
                         ),
                     )
                     for item in comparable_transactions
@@ -171,6 +187,29 @@ class MarketPriceService:
             ):
                 return part
         return parts[0]
+
+    @staticmethod
+    def _district_address(address: str) -> str:
+        parts = normalize_legal_dong_address(address).split()
+        for index, part in enumerate(parts):
+            if part.endswith(("시", "군", "구")) and not part.endswith(
+                ("특별시", "광역시", "특별자치시"),
+            ):
+                return " ".join(parts[: index + 1])
+        return parts[0] if parts else ""
+
+    @staticmethod
+    def _sample_address(
+        district_address: str,
+        legal_dong_name: str | None,
+        jibun: str | None,
+    ) -> str | None:
+        address = " ".join(
+            part
+            for part in (district_address, legal_dong_name, jibun)
+            if part
+        )
+        return address or None
 
     @staticmethod
     def _recent_months(today: date, count: int) -> list[str]:

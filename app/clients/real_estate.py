@@ -23,6 +23,9 @@ class RentTransaction:
     monthly_rent: int
     exclusive_area_m2: float | None
     contract_date: date
+    property_name: str | None = None
+    legal_dong_name: str | None = None
+    jibun: str | None = None
 
 
 ENDPOINTS: dict[str, str] = {
@@ -123,6 +126,23 @@ def parse_rent_transactions(xml: str) -> list[RentTransaction]:
             item,
             ("전용면적", "excluUseAr", "전용면적(㎡)", "totalFloorAr"),
         )
+        property_name = _child_text(
+            item,
+            (
+                "aptNm",
+                "아파트",
+                "단지명",
+                "offiNm",
+                "mhouseNm",
+                "houseNm",
+                "buildingName",
+            ),
+        )
+        legal_dong_name = _child_text(
+            item,
+            ("umdNm", "법정동", "legalDongName"),
+        )
+        jibun = _child_text(item, ("jibun", "지번"))
         try:
             contract_date = date(
                 int(year_month[:4]),
@@ -139,6 +159,9 @@ def parse_rent_transactions(xml: str) -> list[RentTransaction]:
                 monthly_rent=monthly_rent,
                 exclusive_area_m2=area,
                 contract_date=contract_date,
+                property_name=property_name,
+                legal_dong_name=legal_dong_name,
+                jibun=jibun,
             ),
         )
     return transactions

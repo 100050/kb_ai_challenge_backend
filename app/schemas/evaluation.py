@@ -77,6 +77,8 @@ class EvaluationWarning(BaseModel):
 
 
 class PriceComparableSample(BaseModel):
+    name: str | None = None
+    address: str | None = None
     deposit: int
     monthly_rent: int
     exclusive_area_m2: float
@@ -92,6 +94,7 @@ class PriceAppropriatenessResult(BaseModel):
     difference_from_median: int | None = None
     difference_rate_from_median: float | None = None
     price_percentile: float | None = None
+    candidate_equivalent_monthly_cost: int | None = None
     samples: list[PriceComparableSample] = Field(default_factory=list)
     reason: str | None = None
 

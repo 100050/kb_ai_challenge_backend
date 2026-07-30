@@ -483,6 +483,7 @@ data: {"status":"completed","stage":"financial_management","progress":100}
         "difference_from_median": 40000,
         "difference_rate_from_median": 4.55,
         "price_percentile": 72.2,
+        "candidate_equivalent_monthly_cost": null,
         "samples": [],
         "reason": null
       },
@@ -514,7 +515,9 @@ data: {"status":"completed","stage":"financial_management","progress":100}
   `samples`는 빈 배열입니다.
 - 표본이 1~9개이면 `comparison_mode`는 `individual_samples`입니다.
   표본 수가 적어 중앙값 비교 지표는 모두 `null`이며 `samples`에 모든
-  비교 표본을 제공합니다.
+  비교 표본의 매물명, 주소, 계약 정보와 환산 월 임대비용을 제공합니다.
+  `candidate_equivalent_monthly_cost`에는 사용자 후보 매물의 환산 월
+  임대비용을 제공합니다.
 
 표본이 10개 미만인 경우:
 
@@ -527,8 +530,11 @@ data: {"status":"completed","stage":"financial_management","progress":100}
   "difference_from_median": null,
   "difference_rate_from_median": null,
   "price_percentile": null,
+  "candidate_equivalent_monthly_cost": 900000,
   "samples": [
     {
+      "name": "비교 아파트 A",
+      "address": "서울특별시 강남구 역삼동 123-4",
       "deposit": 10000000,
       "monthly_rent": 700000,
       "exclusive_area_m2": 58.0,
@@ -536,6 +542,8 @@ data: {"status":"completed","stage":"financial_management","progress":100}
       "equivalent_monthly_cost": 741667
     },
     {
+      "name": "비교 아파트 B",
+      "address": "서울특별시 강남구 도곡동 55",
       "deposit": 20000000,
       "monthly_rent": 800000,
       "exclusive_area_m2": 62.0,
@@ -549,7 +557,9 @@ data: {"status":"completed","stage":"financial_management","progress":100}
 
 `equivalent_monthly_cost`는 각 표본의
 `월세 + 보증금 × 연 전월세전환율 ÷ 100 ÷ 12`를 원 단위로 반올림한
-금액입니다.
+금액입니다. `candidate_equivalent_monthly_cost`도 같은 전월세전환율과
+공식으로 계산합니다. 공공데이터에 건물·단지명이 없는 주택 유형은
+표본의 `name`이 `null`일 수 있습니다.
 
 필요한 비교 필드가 없거나 외부 데이터를 구하지 못하면
 `price_appropriateness.status`는 `unavailable`이고 `reason`에 원인이
