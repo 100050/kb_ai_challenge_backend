@@ -179,3 +179,20 @@ def test_housing_plan_rejects_purchase_type() -> None:
         app.dependency_overrides.clear()
 
     assert response.status_code == 422
+
+
+def test_housing_plan_rejects_client_supplied_legal_dong_code() -> None:
+    service = FakeHousingPlanService()
+    app.dependency_overrides[get_analysis_service] = lambda: service
+
+    try:
+        with TestClient(app) as client:
+            response = client.post(
+                f"/api/v1/analyses/{service.analysis_id}/housing-plans",
+                json={"legal_dong_code": "1168010100"},
+            )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "VALIDATION_ERROR"

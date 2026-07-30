@@ -6,11 +6,18 @@ from app.clients.legal_dong import LegalDongClient
 from app.clients.r_one import ROneClient
 from app.clients.real_estate import RentTransactionClient
 from app.models.housing_plan import HousingPlan
-from app.schemas.evaluation import PriceAppropriatenessResult
+from app.schemas.evaluation import (
+    PriceAppropriatenessResult,
+    PriceComparableSample,
+)
 from app.services.price_appropriateness import (
     ComparableRent,
     calculate_price_comparison,
+    equivalent_monthly_cost,
 )
+
+
+MINIMUM_MEDIAN_SAMPLE_COUNT = 10
 
 
 class MarketPriceService:
@@ -93,7 +100,32 @@ class MarketPriceService:
             if conversion_rate is not None:
                 break
         if conversion_rate is None:
-            return self._unavailable("conversion_rate_not_found")
+            return self._unavailable(
+                "conversion_rate_not_found",
+                sample_count=len(comparable_transactions),
+            )
+
+        sample_count = len(comparable_transactions)
+        if sample_count < MINIMUM_MEDIAN_SAMPLE_COUNT:
+            return PriceAppropriatenessResult(
+                status="available",
+                sample_count=sample_count,
+                comparison_mode="individual_samples",
+                samples=[
+                    PriceComparableSample(
+                        deposit=item.deposit,
+                        monthly_rent=item.monthly_rent,
+                        exclusive_area_m2=item.exclusive_area_m2,
+                        contract_date=item.contract_date,
+                        equivalent_monthly_cost=equivalent_monthly_cost(
+                            deposit=item.deposit,
+                            monthly_rent=item.monthly_rent,
+                            annual_conversion_rate=Decimal(conversion_rate),
+                        ),
+                    )
+                    for item in comparable_transactions
+                ],
+            )
 
         comparison = calculate_price_comparison(
             candidate_deposit=plan.deposit,
@@ -109,6 +141,8 @@ class MarketPriceService:
         )
         return PriceAppropriatenessResult(
             status="available",
+            sample_count=sample_count,
+            comparison_mode="median",
             median_equivalent_monthly_cost=(
                 comparison.median_equivalent_monthly_cost
             ),
@@ -152,8 +186,13 @@ class MarketPriceService:
         return months
 
     @staticmethod
-    def _unavailable(reason: str) -> PriceAppropriatenessResult:
+    def _unavailable(
+        reason: str,
+        *,
+        sample_count: int = 0,
+    ) -> PriceAppropriatenessResult:
         return PriceAppropriatenessResult(
             status="unavailable",
+            sample_count=sample_count,
             reason=reason,
         )

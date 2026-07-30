@@ -1,9 +1,9 @@
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class CommonFinancialInput(BaseModel):
@@ -76,12 +76,23 @@ class EvaluationWarning(BaseModel):
     message: str
 
 
+class PriceComparableSample(BaseModel):
+    deposit: int
+    monthly_rent: int
+    exclusive_area_m2: float
+    contract_date: date
+    equivalent_monthly_cost: int
+
+
 class PriceAppropriatenessResult(BaseModel):
     status: Literal["available", "unavailable"]
+    sample_count: int = 0
+    comparison_mode: Literal["median", "individual_samples"] | None = None
     median_equivalent_monthly_cost: int | None = None
     difference_from_median: int | None = None
     difference_rate_from_median: float | None = None
     price_percentile: float | None = None
+    samples: list[PriceComparableSample] = Field(default_factory=list)
     reason: str | None = None
 
 

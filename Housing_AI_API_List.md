@@ -44,7 +44,6 @@ data: {"code":"ANALYSIS_NOT_FOUND"}
 - 모든 금액: `0` 이상의 정수
 - 연이자율: `0` 이상의 숫자이며 `3.5`는 연 3.5%를 의미
 - 전용면적: `0`보다 큰 숫자, 단위는 ㎡
-- 법정동 코드: 숫자로 이루어진 10자리 문자열
 - 매물 이름: 1~100자
 - 주소: 1~255자
 - 챗봇 메시지: 1~4000자
@@ -217,10 +216,12 @@ data: {"code":"ANALYSIS_NOT_FOUND"}
 - 구매는 고려하지 않으며 `housing_type`은 `jeonse`, `monthly_rent` 중 하나입니다.
 - `property_type`은 `apartment`, `row_house`, `multi_family`, `officetel`,
   `detached_house`, `multi_household` 중 하나입니다.
-- `legal_dong_code`는 행정안전부 법정동 코드 API에서 얻은 10자리
-  코드입니다. 현재 백엔드는 법정동 검색 API를 별도로 제공하지 않으므로
-  프론트엔드는 주소 선택 결과와 함께 확보한 코드를 이 필드로 전달해야
-  합니다.
+- 프론트엔드는 `legal_dong_code`를 입력하지 않습니다. 백엔드가 매물의
+  `address`를 이용해 행정안전부 법정동 코드 API를 조회하고, 가격
+  적정성 계산에 필요한 지역 코드를 자동으로 결정합니다.
+- 응답의 `legal_dong_code`는 서버 내부 처리와 기존 데이터 호환을 위한
+  보조 필드이며 `null`일 수 있습니다. 프론트엔드는 이 필드에 의존하지
+  않습니다.
 - `exclusive_area_m2`는 가격 비교에 사용하는 제곱미터 단위 전용면적입니다.
 - `monthly_rent`는 전세인 경우 `0`입니다.
 - `utilities`는 관리비에 포함되지 않은 월 공과금입니다.
@@ -229,9 +230,10 @@ data: {"code":"ANALYSIS_NOT_FOUND"}
 - 보증금 대출은 만기일시상환 방식만 고려합니다. 대출원금은 월 현금유출에 포함하지 않고 월 이자만 반영합니다.
 - 대출을 사용하지 않는 매물은 `loan_plan.deposit_loan_amount`와 `loan_plan.annual_interest_rate`를 모두 `0`으로 입력합니다.
 - `name`, `address`, `housing_type`, 모든 비용 필드, `loan_plan`, `additional_costs`가 유효하게 입력되면 `is_complete`가 `true`가 됩니다.
-- `property_type`, `legal_dong_code`, `exclusive_area_m2`가 없어도 재무
-  평가는 실행할 수 있지만 해당 매물의 가격 적정성은 `unavailable`이 될
-  수 있습니다.
+- `property_type`, `exclusive_area_m2`가 없어도 재무 평가는 실행할 수
+  있지만 해당 매물의 가격 적정성은 `unavailable`이 될 수 있습니다.
+- 주소로 법정동 코드를 찾을 수 없는 경우에도 재무 평가는 유지되고 가격
+  적정성만 `unavailable`이 됩니다.
 
 매물 초안이 하나라도 미완성 상태이면 `current_step`은 `housing_plan`, `progress`는 `67`입니다.
 1개 이상의 모든 저장 매물이 완성되면 `current_step`은 `confirmation`, `progress`는 `100`입니다.
@@ -324,7 +326,6 @@ data: {"code":"ANALYSIS_NOT_FOUND"}
   "name": "역삼 원룸",
   "address": "서울특별시 강남구 역삼동",
   "property_type": "apartment",
-  "legal_dong_code": "1168010100",
   "exclusive_area_m2": 59.8,
   "housing_type": "monthly_rent",
   "deposit": 10000000,
@@ -353,7 +354,7 @@ data: {"code":"ANALYSIS_NOT_FOUND"}
   "name": "역삼 원룸",
   "address": "서울특별시 강남구 역삼동",
   "property_type": "apartment",
-  "legal_dong_code": "1168010100",
+  "legal_dong_code": null,
   "exclusive_area_m2": 59.8,
   "housing_type": "monthly_rent",
   "deposit": 10000000,
@@ -470,10 +471,13 @@ data: {"status":"completed","stage":"financial_management","progress":100}
       },
       "price_appropriateness": {
         "status": "available",
+        "sample_count": 18,
+        "comparison_mode": "median",
         "median_equivalent_monthly_cost": 880000,
         "difference_from_median": 40000,
         "difference_rate_from_median": 4.55,
         "price_percentile": 72.2,
+        "samples": [],
         "reason": null
       },
       "calculation_details": {
@@ -494,9 +498,59 @@ data: {"status":"completed","stage":"financial_management","progress":100}
 가격 비교가 가능한 매물에는 비교군의 환산 월 임대비용 중앙값,
 중앙값과의 가격 차액·차이율 및 백분위를 추가로 제공합니다.
 백분위는 `후보 매물 이하 비교군 수 ÷ 전체 비교군 수 × 100`입니다.
+
+`sample_count`는 조회된 실거래 중 전용면적 허용 범위를 통과한 최종
+비교 표본 수입니다. 응답 형태는 표본 수에 따라 달라집니다.
+
+- 표본이 10개 이상이면 `comparison_mode`는 `median`입니다.
+  `median_equivalent_monthly_cost`, `difference_from_median`,
+  `difference_rate_from_median`, `price_percentile`을 제공하고
+  `samples`는 빈 배열입니다.
+- 표본이 1~9개이면 `comparison_mode`는 `individual_samples`입니다.
+  표본 수가 적어 중앙값 비교 지표는 모두 `null`이며 `samples`에 모든
+  비교 표본을 제공합니다.
+
+표본이 10개 미만인 경우:
+
+```json
+{
+  "status": "available",
+  "sample_count": 2,
+  "comparison_mode": "individual_samples",
+  "median_equivalent_monthly_cost": null,
+  "difference_from_median": null,
+  "difference_rate_from_median": null,
+  "price_percentile": null,
+  "samples": [
+    {
+      "deposit": 10000000,
+      "monthly_rent": 700000,
+      "exclusive_area_m2": 58.0,
+      "contract_date": "2026-07-01",
+      "equivalent_monthly_cost": 741667
+    },
+    {
+      "deposit": 20000000,
+      "monthly_rent": 800000,
+      "exclusive_area_m2": 62.0,
+      "contract_date": "2026-07-02",
+      "equivalent_monthly_cost": 883333
+    }
+  ],
+  "reason": null
+}
+```
+
+`equivalent_monthly_cost`는 각 표본의
+`월세 + 보증금 × 연 전월세전환율 ÷ 100 ÷ 12`를 원 단위로 반올림한
+금액입니다.
+
 필요한 비교 필드가 없거나 외부 데이터를 구하지 못하면
 `price_appropriateness.status`는 `unavailable`이고 `reason`에 원인이
-들어갑니다.
+들어갑니다. 이 경우 `comparison_mode`는 `null`, 중앙값 비교 필드는
+`null`, `samples`는 빈 배열입니다. 이미 비교 표본까지 조회한 뒤
+전월세전환율을 얻지 못한 경우에는 `sample_count`만 실제 표본 수로
+제공될 수 있습니다.
 임의 점수, 등급 또는 추천 순위는 계산하지 않습니다.
 보증금 대출 월 이자는 `대출액 × 연이자율 ÷ 100 ÷ 12`로 계산하고 원 단위에서 반올림합니다.
 초기자금이 부족해도 이후 계산은 계약 체결을 가정한 참고값으로 제공하며 `warnings`에 이를 표시합니다.

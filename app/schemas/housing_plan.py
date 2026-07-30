@@ -2,13 +2,12 @@ from datetime import datetime
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 Money = Annotated[int, Field(ge=0)]
 InterestRate = Annotated[float, Field(ge=0)]
 Area = Annotated[float, Field(gt=0)]
-LegalDongCode = Annotated[str, Field(pattern=r"^\d{10}$")]
 PropertyType = Literal[
     "apartment",
     "row_house",
@@ -31,10 +30,11 @@ class AdditionalCosts(BaseModel):
 
 
 class HousingPlanUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     name: str | None = Field(default=None, min_length=1, max_length=100)
     address: str | None = Field(default=None, min_length=1, max_length=255)
     property_type: PropertyType | None = None
-    legal_dong_code: LegalDongCode | None = None
     exclusive_area_m2: Area | None = None
     housing_type: Literal["jeonse", "monthly_rent"] | None = None
     deposit: Money | None = None
