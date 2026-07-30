@@ -7,18 +7,12 @@ from fastapi import APIRouter, Depends, Response, status
 from fastapi.responses import StreamingResponse
 
 from app.api.dependencies import get_chat_service
-from app.api.errors import AnalysisNotFoundError, ApiError
+from app.api.errors import AnalysisNotFoundError
 from app.schemas.chat import (
-    ChatApprovalRequest,
     ChatHistoryResponse,
     ChatMessageCreate,
-    ChatTurnResponse,
 )
-from app.services.chat import (
-    ChatService,
-    ConversationNotFound,
-    PendingApprovalNotFound,
-)
+from app.services.chat import ChatService
 
 
 router = APIRouter(
@@ -49,12 +43,7 @@ async def send_message(
                 {"code": "ANALYSIS_NOT_FOUND"},
             )
             return
-        if result.status == "approval_required":
-            yield _sse(
-                "approval_required",
-                result.model_dump(mode="json"),
-            )
-        elif result.content:
+        if result.content:
             yield _sse(
                 "message_delta",
                 {"content": result.content},
@@ -62,30 +51,6 @@ async def send_message(
         yield _sse("message_end", result.model_dump(mode="json"))
 
     return StreamingResponse(events(), media_type="text/event-stream")
-
-
-@router.post("/approvals", response_model=ChatTurnResponse)
-async def resolve_approval(
-    analysis_id: UUID,
-    payload: ChatApprovalRequest,
-    service: Annotated[ChatService, Depends(get_chat_service)],
-) -> ChatTurnResponse:
-    try:
-        return await service.resolve_approval(
-            analysis_id,
-            payload.turn_id,
-            payload.tool_call_id,
-            approved=payload.approved,
-        )
-    except ConversationNotFound as exc:
-        raise AnalysisNotFoundError from exc
-    except PendingApprovalNotFound as exc:
-        raise ApiError(
-            status_code=404,
-            code="PENDING_APPROVAL_NOT_FOUND",
-            message="처리할 도구 승인 요청을 찾을 수 없습니다.",
-        ) from exc
-
 
 @router.get("/messages", response_model=ChatHistoryResponse)
 async def get_messages(

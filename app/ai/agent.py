@@ -2,7 +2,7 @@ import json
 from typing import Any
 from uuid import UUID
 
-from pydantic_ai import Agent, DeferredToolRequests, RunContext
+from pydantic_ai import Agent, RunContext
 from pydantic_ai.models import Model
 
 from app.ai.dependencies import ChatDependencies
@@ -17,8 +17,8 @@ AGENT_INSTRUCTIONS = """
 - 서버가 제공한 입력값과 계산 결과만 권위 있는 수치로 사용합니다.
 - 재무 수치, 가격 중앙값, 차액, 차이율, 백분위를 임의로 만들지 않습니다.
 - 데이터가 없으면 없다고 말하고 필요한 입력을 안내합니다.
-- 사용자 입력 변경 요청에는 적절한 수정 도구를 호출합니다.
-- 수정 도구 실행 전에는 변경할 필드와 값을 간단히 확인시킵니다.
+- 사용자가 명시적으로 입력 변경을 요청하면 적절한 수정 도구를 즉시
+  호출합니다.
 - 특정 매물 수정에는 반드시 housing_plan_id를 사용합니다.
 - 확정적인 투자 또는 대출 권유를 하지 않습니다.
 """.strip()
@@ -30,11 +30,11 @@ def _provided(**values: Any) -> dict[str, Any]:
 
 def create_chat_agent(
     model: Model,
-) -> Agent[ChatDependencies, str | DeferredToolRequests]:
+) -> Agent[ChatDependencies, str]:
     agent = Agent(
         model,
         deps_type=ChatDependencies,
-        output_type=[str, DeferredToolRequests],
+        output_type=str,
         instructions=AGENT_INSTRUCTIONS,
     )
 
@@ -50,7 +50,7 @@ def create_chat_agent(
             )
         )
 
-    @agent.tool(requires_approval=True)
+    @agent.tool
     async def update_cash_flow(
         ctx: RunContext[ChatDependencies],
         after_tax_monthly_income: int | None = None,
@@ -81,7 +81,7 @@ def create_chat_agent(
             "cash_flow": result.model_dump(mode="json"),
         }
 
-    @agent.tool(requires_approval=True)
+    @agent.tool
     async def update_financial_goals(
         ctx: RunContext[ChatDependencies],
         target_monthly_savings: int | None = None,
@@ -114,7 +114,7 @@ def create_chat_agent(
             "financial_goals": result.model_dump(mode="json"),
         }
 
-    @agent.tool(requires_approval=True)
+    @agent.tool
     async def update_housing_plan(
         ctx: RunContext[ChatDependencies],
         housing_plan_id: UUID,

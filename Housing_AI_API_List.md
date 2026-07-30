@@ -58,7 +58,7 @@ data: {"code":"ANALYSIS_NOT_FOUND"}
 | 월 현금흐름 상태 | `essential_expense_deficit`, `savings_target_shortfall`, `safety_margin_shortfall`, `sufficient` |
 | 1년 재무목표 상태 | `below_target`, `target_met`, `above_target` |
 | 가격 적정성 상태 | `available`, `unavailable` |
-| 챗봇 응답 상태 | `completed`, `approval_required`, `failed` |
+| 챗봇 응답 상태 | `completed`, `failed` |
 
 ### `GET /health`
 
@@ -593,7 +593,7 @@ event: message_delta
 data: {"content":"저장된 재무 분석 결과를 설명합니다."}
 
 event: message_end
-data: {"turn_id":"...","role":"assistant","content":"...","status":"completed","pending_approvals":[],"created_at":"2026-07-27T03:40:00Z"}
+data: {"turn_id":"...","role":"assistant","content":"...","status":"completed","created_at":"2026-07-27T03:40:00Z"}
 ```
 
 Pydantic AI의 전체 메시지 이력은 PostgreSQL에 저장됩니다. 사용자가
@@ -601,57 +601,10 @@ Pydantic AI의 전체 메시지 이력은 PostgreSQL에 저장됩니다. 사용�
 계속합니다.
 
 사용자가 소득·생활비, 자산·재무목표 또는 매물별 입력 변경을 요청하면
-에이전트는 수정 Tool을 제안합니다. 수정 Tool은 바로 실행되지 않고 다음
-`approval_required` 이벤트를 반환합니다.
-
-```text
-event: approval_required
-data: {"turn_id":"4d694b39-e6e3-4ce2-a893-d54319a62c6f","role":"assistant","content":null,"status":"approval_required","pending_approvals":[{"tool_call_id":"update-income","tool_name":"update_cash_flow","arguments":{"after_tax_monthly_income":4000000}}],"created_at":"2026-07-27T03:40:00Z"}
-
-event: message_end
-data: {"turn_id":"4d694b39-e6e3-4ce2-a893-d54319a62c6f","role":"assistant","content":null,"status":"approval_required","pending_approvals":[{"tool_call_id":"update-income","tool_name":"update_cash_flow","arguments":{"after_tax_monthly_income":4000000}}],"created_at":"2026-07-27T03:40:00Z"}
-```
-
-프론트엔드는 `approval_required` 이벤트에서 변경 전 확인 UI를 표시하고
-뒤이어 오는 `message_end` 이벤트에서 현재 SSE 연결을 종료 처리합니다.
-
-### `POST /analyses/{analysis_id}/chat/approvals`
-
-요청:
-
-```json
-{
-  "turn_id": "4d694b39-e6e3-4ce2-a893-d54319a62c6f",
-  "tool_call_id": "update-income",
-  "approved": true
-}
-```
-
-승인된 경우 기존 단계별 PATCH와 동일한 서비스 및 검증을 사용하여
-입력된 필드만 수정합니다. 입력 변경으로 기존 평가 결과는 삭제되며
-새 결과를 보려면 평가 API를 다시 실행해야 합니다. 거절하면 입력은
-변경되지 않고 대화를 계속합니다.
-
-`200 OK`:
-
-```json
-{
-  "turn_id": "4d694b39-e6e3-4ce2-a893-d54319a62c6f",
-  "role": "assistant",
-  "content": "월 소득을 400만 원으로 변경했습니다.",
-  "status": "completed",
-  "pending_approvals": [],
-  "created_at": "2026-07-27T03:40:00Z"
-}
-```
-
-한 응답에 처리되지 않은 다른 Tool 호출이 남아 있으면 `status`가 다시
-`approval_required`이고 `pending_approvals`에 다음 승인 대상이
-포함될 수 있습니다.
-
-- 분석을 찾을 수 없으면 `404 ANALYSIS_NOT_FOUND`
-- 해당 대화에서 처리할 승인 요청을 찾을 수 없으면
-  `404 PENDING_APPROVAL_NOT_FOUND`
+에이전트가 기존 단계별 PATCH와 동일한 서비스 및 검증을 사용하는 수정
+Tool을 즉시 실행합니다. 별도의 사용자 승인 요청이나 승인 API는 없습니다.
+입력 변경으로 기존 평가 결과는 삭제되며 새 결과를 보려면 평가 API를
+다시 실행해야 합니다.
 
 ### `GET /analyses/{analysis_id}/chat/messages`
 

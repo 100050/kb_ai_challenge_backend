@@ -26,7 +26,10 @@ class ConversationRepository:
         if conversation is not None:
             return conversation
 
-        conversation = Conversation(analysis_id=analysis_id)
+        conversation = Conversation(
+            analysis_id=analysis_id,
+            turns=[],
+        )
         self.session.add(conversation)
         await self.session.flush()
         return conversation

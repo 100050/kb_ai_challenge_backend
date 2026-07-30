@@ -61,3 +61,17 @@ def test_chat_message_stream_and_persistent_history_endpoints() -> None:
     assert history.status_code == 200
     assert history.json()["conversation_id"] == str(service.conversation_id)
     assert cleared.status_code == 204
+
+
+def test_chat_approval_endpoint_is_removed() -> None:
+    with TestClient(app) as client:
+        response = client.post(
+            f"/api/v1/analyses/{uuid4()}/chat/approvals",
+            json={
+                "turn_id": str(uuid4()),
+                "tool_call_id": "update-income",
+                "approved": True,
+            },
+        )
+
+    assert response.status_code == 404

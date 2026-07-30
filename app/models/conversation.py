@@ -40,6 +40,7 @@ class Conversation(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
         order_by="ChatTurn.created_at",
+        lazy="raise",
     )
 
 

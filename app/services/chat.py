@@ -4,10 +4,7 @@ from uuid import UUID
 from pydantic import TypeAdapter
 from pydantic_ai import (
     Agent,
-    DeferredToolRequests,
-    DeferredToolResults,
     ModelMessagesTypeAdapter,
-    ToolDenied,
 )
 
 from app.ai.dependencies import ChatDependencies
@@ -18,17 +15,8 @@ from app.schemas.chat import (
     ChatHistoryItem,
     ChatHistoryResponse,
     ChatTurnResponse,
-    PendingToolApproval,
 )
 from app.services.analysis import AnalysisService
-
-
-class ConversationNotFound(Exception):
-    pass
-
-
-class PendingApprovalNotFound(Exception):
-    pass
 
 
 class ChatService:
@@ -37,7 +25,7 @@ class ChatService:
         repository: ConversationRepository,
         evaluation_repository: EvaluationRepository,
         analysis_service: AnalysisService,
-        agent: Agent[ChatDependencies, str | DeferredToolRequests],
+        agent: Agent[ChatDependencies, str],
     ) -> None:
         self.repository = repository
         self.evaluation_repository = evaluation_repository
@@ -63,97 +51,16 @@ class ChatService:
         )
         messages = self._dump_messages(result.new_messages())
 
-        if isinstance(result.output, DeferredToolRequests):
-            approvals = [
-                {
-                    "tool_call_id": call.tool_call_id,
-                    "tool_name": call.tool_name,
-                    "arguments": call.args_as_dict(),
-                }
-                for call in result.output.approvals
-            ]
-            turn = ChatTurn(
-                conversation_id=conversation.id,
-                user_content=content,
-                assistant_content=None,
-                status="approval_required",
-                model_messages=messages,
-                pending_approvals=approvals,
-            )
-        else:
-            turn = ChatTurn(
-                conversation_id=conversation.id,
-                user_content=content,
-                assistant_content=result.output,
-                status="completed",
-                model_messages=messages,
-                pending_approvals=None,
-            )
+        turn = ChatTurn(
+            conversation_id=conversation.id,
+            user_content=content,
+            assistant_content=result.output,
+            status="completed",
+            model_messages=messages,
+            pending_approvals=None,
+        )
 
         await self.repository.add_turn(turn)
-        return self._turn_response(turn)
-
-    async def resolve_approval(
-        self,
-        analysis_id: UUID,
-        turn_id: UUID,
-        tool_call_id: str,
-        *,
-        approved: bool,
-    ) -> ChatTurnResponse:
-        deps = await self._dependencies(analysis_id)
-        if deps is None:
-            raise ConversationNotFound
-        conversation = await self.repository.get_by_analysis(analysis_id)
-        if conversation is None:
-            raise ConversationNotFound
-        turn = await self.repository.get_turn(conversation.id, turn_id)
-        if turn is None or turn.status != "approval_required":
-            raise PendingApprovalNotFound
-
-        pending_ids = {
-            item["tool_call_id"] for item in turn.pending_approvals or []
-        }
-        if tool_call_id not in pending_ids:
-            raise PendingApprovalNotFound
-
-        decision: bool | ToolDenied = (
-            True
-            if approved
-            else ToolDenied("사용자가 입력 변경을 취소했습니다.")
-        )
-        history = self._history(conversation.turns)
-        result = await self.agent.run(
-            deps=deps,
-            message_history=history,
-            conversation_id=str(conversation.id),
-            deferred_tool_results=DeferredToolResults(
-                approvals={tool_call_id: decision},
-            ),
-        )
-        turn.model_messages = [
-            *turn.model_messages,
-            *self._dump_messages(result.new_messages()),
-        ]
-
-        if isinstance(result.output, DeferredToolRequests):
-            approvals = [
-                {
-                    "tool_call_id": call.tool_call_id,
-                    "tool_name": call.tool_name,
-                    "arguments": call.args_as_dict(),
-                }
-                for call in result.output.approvals
-            ]
-            turn.status = "approval_required"
-            turn.pending_approvals = approvals
-            turn.assistant_content = None
-        else:
-            turn.status = "completed"
-            turn.pending_approvals = None
-            turn.assistant_content = result.output
-
-        await self.repository.save_turn(turn)
         return self._turn_response(turn)
 
     async def history(
@@ -232,9 +139,5 @@ class ChatService:
             turn_id=turn.id,
             content=turn.assistant_content,
             status=turn.status,
-            pending_approvals=[
-                PendingToolApproval.model_validate(item)
-                for item in turn.pending_approvals or []
-            ],
             created_at=turn.created_at,
         )
