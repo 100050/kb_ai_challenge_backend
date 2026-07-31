@@ -33,6 +33,7 @@ class HousingPlanUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str | None = Field(default=None, min_length=1, max_length=100)
+    memo: str | None = Field(default=None, max_length=2000)
     address: str | None = Field(default=None, min_length=1, max_length=255)
     property_type: PropertyType | None = None
     exclusive_area_m2: Area | None = None
@@ -54,6 +55,7 @@ class HousingPlanResponse(BaseModel):
     analysis_id: UUID
     property_id: UUID
     name: str | None
+    memo: str | None = None
     address: str | None
     property_type: PropertyType | None = None
     legal_dong_code: str | None = None
@@ -74,6 +76,7 @@ class HousingPlanResponse(BaseModel):
 class HousingPlanSummary(BaseModel):
     property_id: UUID
     name: str | None
+    memo: str | None = None
     housing_type: Literal["jeonse", "monthly_rent"] | None
     is_complete: bool
     updated_at: datetime

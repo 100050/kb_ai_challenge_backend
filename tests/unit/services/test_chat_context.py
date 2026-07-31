@@ -62,3 +62,24 @@ def test_context_changes_reports_added_and_removed_housing_plans() -> None:
             },
         },
     ]
+
+
+def test_context_changes_reports_updated_housing_plan_memo() -> None:
+    previous = {
+        "housing_plans": [
+            {"property_id": "property-1", "memo": "엘리베이터 없음"},
+        ],
+    }
+    current = {
+        "housing_plans": [
+            {"property_id": "property-1", "memo": "엘리베이터 있음"},
+        ],
+    }
+
+    assert ChatService._context_changes(previous, current) == [
+        {
+            "path": "housing_plans[property-1].memo",
+            "before": "엘리베이터 없음",
+            "after": "엘리베이터 있음",
+        },
+    ]

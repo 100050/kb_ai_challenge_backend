@@ -226,6 +226,9 @@ data: {"code":"ANALYSIS_NOT_FOUND"}
 - `monthly_rent`는 전세인 경우 `0`입니다.
 - `utilities`는 관리비에 포함되지 않은 월 공과금입니다.
 - `transportation_cost`는 해당 매물에 입주했을 때 예상되는 월 교통비입니다.
+- `memo`는 역세권, 엘리베이터, 채광, 소음 등 정량화하기 어려운 매물의
+  특징을 기록하는 선택 입력이며 최대 2,000자입니다. 재무 계산에는
+  사용하지 않고 매물 조회, 평가 결과와 챗봇 설명에 제공합니다.
 - 대출 계획과 중개보수, 이사비, 기타 입주비는 매물마다 별도로 저장합니다.
 - 보증금 대출은 만기일시상환 방식만 고려합니다. 대출원금은 월 현금유출에 포함하지 않고 월 이자만 반영합니다.
 - 대출을 사용하지 않는 매물은 `loan_plan.deposit_loan_amount`와 `loan_plan.annual_interest_rate`를 모두 `0`으로 입력합니다.
@@ -250,7 +253,8 @@ data: {"code":"ANALYSIS_NOT_FOUND"}
 
 ```json
 {
-  "name": "역삼 원룸"
+  "name": "역삼 원룸",
+  "memo": "역세권, 엘리베이터 있음"
 }
 ```
 
@@ -261,6 +265,7 @@ data: {"code":"ANALYSIS_NOT_FOUND"}
   "analysis_id": "550e8400-e29b-41d4-a716-446655440000",
   "property_id": "43b49e66-0fa2-4e0d-aee6-2f6cbc827290",
   "name": "역삼 원룸",
+  "memo": "역세권, 엘리베이터 있음",
   "address": null,
   "property_type": null,
   "legal_dong_code": null,
@@ -291,6 +296,7 @@ data: {"code":"ANALYSIS_NOT_FOUND"}
     {
       "property_id": "43b49e66-0fa2-4e0d-aee6-2f6cbc827290",
       "name": "역삼 원룸",
+      "memo": "역세권, 엘리베이터 있음",
       "housing_type": "monthly_rent",
       "is_complete": true,
       "updated_at": "2026-07-23T03:25:00Z"
@@ -298,6 +304,7 @@ data: {"code":"ANALYSIS_NOT_FOUND"}
     {
       "property_id": "bab7a2d4-d056-41f9-9f69-90a0bd7a72ac",
       "name": "신림 오피스텔",
+      "memo": null,
       "housing_type": "jeonse",
       "is_complete": false,
       "updated_at": "2026-07-23T03:26:00Z"
@@ -324,6 +331,7 @@ data: {"code":"ANALYSIS_NOT_FOUND"}
 ```json
 {
   "name": "역삼 원룸",
+  "memo": "역세권, 엘리베이터 있음, 채광 좋음",
   "address": "서울특별시 강남구 역삼동",
   "property_type": "apartment",
   "exclusive_area_m2": 59.8,
@@ -352,6 +360,7 @@ data: {"code":"ANALYSIS_NOT_FOUND"}
   "analysis_id": "550e8400-e29b-41d4-a716-446655440000",
   "property_id": "43b49e66-0fa2-4e0d-aee6-2f6cbc827290",
   "name": "역삼 원룸",
+  "memo": "역세권, 엘리베이터 있음, 채광 좋음",
   "address": "서울특별시 강남구 역삼동",
   "property_type": "apartment",
   "legal_dong_code": null,
@@ -403,6 +412,10 @@ data: {"code":"ANALYSIS_NOT_FOUND"}
 
 가격 적정성 비교 표본은 해당 매물과 같은 주택 유형의 최근 24개월
 전월세 실거래 중 전용면적이 후보 매물의 ±15% 범위인 거래로 구성합니다.
+전월세전환율은 먼저 해당 시·군·구의 주택 유형별 값을 조회합니다. 값이
+없으면 그 시·군·구를 포함하는 상위 시·도의 동일 주택 유형 전환율을
+사용합니다. 두 값이 모두 없으면 같은 지역 순서로 종합주택 전환율을
+조회합니다.
 주소의 첫 지역명이 `부산시`, `세종시`와 같은 광역자치단체 축약형이면
 법정동 조회 전에 `부산광역시`, `세종특별자치시` 등의 공식 명칭으로
 자동 변환합니다.
@@ -456,6 +469,7 @@ data: {"status":"completed","stage":"financial_management","progress":100}
     {
       "property_id": "43b49e66-0fa2-4e0d-aee6-2f6cbc827290",
       "name": "역삼 원룸",
+      "memo": "역세권, 엘리베이터 있음, 채광 좋음",
       "initial_funds": {
         "initial_cash_required": 11600000,
         "post_move_liquid_assets": 83400000,
@@ -608,6 +622,14 @@ Pydantic AI의 전체 메시지 이력은 PostgreSQL에 저장됩니다. 사용�
 Tool을 즉시 실행합니다. 별도의 사용자 승인 요청이나 승인 API는 없습니다.
 입력 변경으로 기존 평가 결과는 삭제되며 새 결과를 보려면 평가 API를
 다시 실행해야 합니다.
+
+사용자가 분석 지표의 계산식이나 계산 기준을 질문하면 챗봇은 읽기 전용
+`get_calculation_formula` Tool로 서버 계산식, 변수와 반올림 기준을
+조회합니다. 특정 매물의 실제 계산 과정을 질문하면
+`get_calculation_breakdown` Tool로 해당 `housing_plan_id`의 저장된
+입력값·중간값·최종 결과를 조회합니다. AI는 Tool이 반환한 값만 설명하며
+새로운 재무 수치를 임의로 계산하지 않습니다. 계산식 조회 Tool은 DB를
+변경하지 않으며 별도의 사용자 승인이 필요하지 않습니다.
 
 ### `GET /analyses/{analysis_id}/chat/messages`
 

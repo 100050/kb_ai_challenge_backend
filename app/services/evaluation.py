@@ -174,6 +174,7 @@ class EvaluationService:
         return PropertyFinancialInput(
             property_id=plan.id,
             name=plan.name,
+            memo=plan.memo,
             deposit=plan.deposit,
             monthly_rent=plan.monthly_rent,
             maintenance_fee=plan.maintenance_fee,

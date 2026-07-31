@@ -100,13 +100,17 @@ def test_housing_plan_crud_and_partial_save() -> None:
         with TestClient(app) as client:
             created = client.post(
                 f"/api/v1/analyses/{service.analysis_id}/housing-plans",
-                json={"name": "역삼 원룸"},
+                json={
+                    "name": "역삼 원룸",
+                    "memo": "역세권, 엘리베이터 있음",
+                },
             )
             property_id = created.json()["property_id"]
             updated = client.patch(
                 f"/api/v1/analyses/{service.analysis_id}/housing-plans/{property_id}",
                 json={
                     "address": "서울특별시 강남구 역삼동",
+                    "memo": "역세권, 엘리베이터 있음, 채광 좋음",
                     "housing_type": "monthly_rent",
                     "deposit": 10_000_000,
                     "monthly_rent": 700_000,
@@ -138,9 +142,11 @@ def test_housing_plan_crud_and_partial_save() -> None:
 
     assert created.status_code == 201
     assert created.json()["name"] == "역삼 원룸"
+    assert created.json()["memo"] == "역세권, 엘리베이터 있음"
     assert created.json()["is_complete"] is False
     assert updated.status_code == 200
     assert updated.json()["name"] == "역삼 원룸"
+    assert updated.json()["memo"] == "역세권, 엘리베이터 있음, 채광 좋음"
     assert updated.json()["is_complete"] is True
     assert listed.status_code == 200
     assert len(listed.json()["housing_plans"]) == 1
@@ -190,6 +196,23 @@ def test_housing_plan_rejects_client_supplied_legal_dong_code() -> None:
             response = client.post(
                 f"/api/v1/analyses/{service.analysis_id}/housing-plans",
                 json={"legal_dong_code": "1168010100"},
+            )
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "VALIDATION_ERROR"
+
+
+def test_housing_plan_rejects_memo_over_two_thousand_characters() -> None:
+    service = FakeHousingPlanService()
+    app.dependency_overrides[get_analysis_service] = lambda: service
+
+    try:
+        with TestClient(app) as client:
+            response = client.post(
+                f"/api/v1/analyses/{service.analysis_id}/housing-plans",
+                json={"memo": "가" * 2001},
             )
     finally:
         app.dependency_overrides.clear()

@@ -9,6 +9,8 @@ def test_all_input_update_tools_execute_without_user_approval() -> None:
     tools = agent._function_toolset.tools
 
     assert set(tools) == {
+        "get_calculation_formula",
+        "get_calculation_breakdown",
         "update_cash_flow",
         "update_financial_goals",
         "update_housing_plan",

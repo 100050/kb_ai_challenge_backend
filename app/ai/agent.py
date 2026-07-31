@@ -8,6 +8,11 @@ from pydantic_ai.models import Model
 from app.ai.dependencies import ChatDependencies
 from app.schemas.analysis_input import CashFlowUpdate, FinancialGoalsUpdate
 from app.schemas.housing_plan import HousingPlanUpdate
+from app.services.calculation_explanations import (
+    CalculationMetric,
+    calculation_breakdown,
+    calculation_formula,
+)
 
 
 AGENT_INSTRUCTIONS = """
@@ -17,6 +22,14 @@ AGENT_INSTRUCTIONS = """
 - 서버가 제공한 입력값과 계산 결과만 권위 있는 수치로 사용합니다.
 - 재무 수치, 가격 중앙값, 차액, 차이율, 백분위를 임의로 만들지 않습니다.
 - 데이터가 없으면 없다고 말하고 필요한 입력을 안내합니다.
+- 사용자가 계산식이나 계산 기준을 물으면 get_calculation_formula 도구를
+  사용합니다.
+- 특정 매물의 실제 계산 과정을 물으면 get_calculation_breakdown 도구를
+  사용하고, 도구가 반환한 수식·피연산자·결과만 설명합니다.
+- 계산 과정 도구의 결과가 없으면 직접 수치를 추측하거나 새로 계산하지
+  않습니다.
+- 매물 메모는 사용자가 기록한 정성 정보로 취급하고, 매물의 장단점을
+  설명할 때 활용하되 검증된 사실이나 재무 계산값처럼 단정하지 않습니다.
 - 사용자가 명시적으로 입력 변경을 요청하면 적절한 수정 도구를 즉시
   호출합니다.
 - 특정 매물 수정에는 반드시 housing_plan_id를 사용합니다.
@@ -48,6 +61,27 @@ def create_chat_agent(
                 ensure_ascii=False,
                 default=str,
             )
+        )
+
+    @agent.tool
+    async def get_calculation_formula(
+        ctx: RunContext[ChatDependencies],
+        metric: CalculationMetric,
+    ) -> dict[str, Any]:
+        """재무 및 가격 적정성 지표의 공식 계산식과 변수 의미를 조회합니다."""
+        return calculation_formula(metric)
+
+    @agent.tool
+    async def get_calculation_breakdown(
+        ctx: RunContext[ChatDependencies],
+        housing_plan_id: UUID,
+        metric: CalculationMetric,
+    ) -> dict[str, Any]:
+        """특정 후보 매물 지표의 수식, 실제 피연산자와 저장된 결과를 조회합니다."""
+        return calculation_breakdown(
+            ctx.deps.analysis_context,
+            str(housing_plan_id),
+            metric,
         )
 
     @agent.tool
@@ -119,6 +153,7 @@ def create_chat_agent(
         ctx: RunContext[ChatDependencies],
         housing_plan_id: UUID,
         name: str | None = None,
+        memo: str | None = None,
         address: str | None = None,
         deposit: int | None = None,
         monthly_rent: int | None = None,
@@ -134,6 +169,7 @@ def create_chat_agent(
         """후보 매물과 해당 매물의 대출·입주비 입력을 수정합니다."""
         values = _provided(
             name=name,
+            memo=memo,
             address=address,
             deposit=deposit,
             monthly_rent=monthly_rent,

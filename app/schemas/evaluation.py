@@ -20,6 +20,7 @@ class CommonFinancialInput(BaseModel):
 class PropertyFinancialInput(BaseModel):
     property_id: UUID
     name: str
+    memo: str | None = None
     deposit: int
     monthly_rent: int
     maintenance_fee: int
@@ -102,6 +103,7 @@ class PriceAppropriatenessResult(BaseModel):
 class PropertyFinancialEvaluation(BaseModel):
     property_id: UUID
     name: str
+    memo: str | None = None
     initial_funds: InitialFundsResult
     monthly_cash_flow: MonthlyCashFlowResult
     annual_goal: AnnualGoalResult

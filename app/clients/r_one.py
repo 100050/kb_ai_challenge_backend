@@ -24,19 +24,26 @@ class ROneClient:
         property_type: str,
         district_name: str,
         year_month: str,
+        *,
+        parent_region_name: str | None = None,
     ) -> Decimal | None:
-        rate = await self._query(
-            TABLE_IDS[property_type],
-            district_name,
-            year_month,
-        )
-        if rate is not None:
-            return rate
-        return await self._query(
-            "A_2024_00155",
-            district_name,
-            year_month,
-        )
+        region_names = [district_name]
+        if (
+            parent_region_name is not None
+            and parent_region_name != district_name
+        ):
+            region_names.append(parent_region_name)
+
+        for table_id in (TABLE_IDS[property_type], "A_2024_00155"):
+            for region_name in region_names:
+                rate = await self._query(
+                    table_id,
+                    region_name,
+                    year_month,
+                )
+                if rate is not None:
+                    return rate
+        return None
 
     async def _query(
         self,

@@ -388,6 +388,7 @@ class AnalysisService:
             analysis_id=housing_plan.analysis_id,
             property_id=housing_plan.id,
             name=housing_plan.name,
+            memo=housing_plan.memo,
             address=housing_plan.address,
             property_type=housing_plan.property_type,
             legal_dong_code=housing_plan.legal_dong_code,
@@ -412,6 +413,7 @@ class AnalysisService:
         return HousingPlanSummary(
             property_id=housing_plan.id,
             name=housing_plan.name,
+            memo=housing_plan.memo,
             housing_type=housing_plan.housing_type,
             is_complete=housing_plan.is_complete,
             updated_at=housing_plan.updated_at,

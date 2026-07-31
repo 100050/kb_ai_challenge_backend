@@ -25,6 +25,7 @@ def property_input() -> PropertyFinancialInput:
     return PropertyFinancialInput(
         property_id=uuid4(),
         name="역삼 원룸",
+        memo="역세권, 엘리베이터 있음",
         deposit=10_000_000,
         monthly_rent=700_000,
         maintenance_fee=100_000,
@@ -41,6 +42,7 @@ def property_input() -> PropertyFinancialInput:
 def test_evaluate_property_calculates_three_financial_cards() -> None:
     result = evaluate_property(common_input(), property_input())
 
+    assert result.memo == "역세권, 엘리베이터 있음"
     assert result.initial_funds.initial_cash_required == 11_600_000
     assert result.initial_funds.post_move_liquid_assets == 83_400_000
     assert result.initial_funds.emergency_fund_gap == 73_400_000

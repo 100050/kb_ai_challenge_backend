@@ -143,6 +143,7 @@ def evaluate_property(
     return PropertyFinancialEvaluation(
         property_id=housing.property_id,
         name=housing.name,
+        memo=housing.memo,
         initial_funds=InitialFundsResult(
             initial_cash_required=initial_cash_required,
             post_move_liquid_assets=post_move_liquid_assets,

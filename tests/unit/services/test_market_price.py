@@ -45,6 +45,8 @@ class FakeROneClient:
         property_type: str,
         district_name: str,
         year_month: str,
+        *,
+        parent_region_name: str | None = None,
     ) -> Decimal | None:
         return Decimal("5") if year_month == "202607" else None
 
@@ -60,6 +62,18 @@ def test_market_price_uses_twenty_four_months_and_fifteen_percent_area_by_defaul
     assert service.lookback_months == 24
     assert service.area_tolerance_percent == 15
     assert len(service._recent_months(date(2026, 7, 1), 24)) == 24
+
+
+def test_market_price_extracts_r_one_parent_region_name() -> None:
+    assert MarketPriceService._parent_region_name(
+        "서울시 종로구 명륜3가",
+    ) == "서울"
+    assert MarketPriceService._parent_region_name(
+        "부산광역시 동구 수정동",
+    ) == "부산"
+    assert MarketPriceService._parent_region_name(
+        "경기도 성남시 분당구 정자동",
+    ) == "경기"
 
 
 def test_market_price_filters_similar_area_and_returns_metrics() -> None:
