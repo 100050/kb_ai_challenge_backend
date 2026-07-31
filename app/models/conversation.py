@@ -33,6 +33,10 @@ class Conversation(Base):
         default=utc_now,
         onupdate=utc_now,
     )
+    analysis_snapshot: Mapped[dict[str, Any] | None] = mapped_column(
+        JSONB,
+        nullable=True,
+    )
 
     analysis: Mapped["Analysis"] = relationship(back_populates="conversation")
     turns: Mapped[list["ChatTurn"]] = relationship(
