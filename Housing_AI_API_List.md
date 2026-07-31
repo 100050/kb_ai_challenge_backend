@@ -172,7 +172,12 @@ data: {"code":"ANALYSIS_NOT_FOUND"}
 - `monthly_safety_margin`: 예정 지출과 목표 저축 이후에도 남겨두려는 월 완충 금액
 - `available_cash`: 새 계약에 실제로 사용할 수 있는 현금성 자산
 - `minimum_emergency_fund`: 입주 후에도 보유하려는 최소 유동자산
-- `recoverable_existing_rental_deposit`: 새 계약 보증금 지급 전까지 반환받을 수 있는 기존 임차보증금
+- `recoverable_existing_rental_deposit`: 향후 반환받을 수 있는 기존 임차보증금
+- `existing_rental_deposit_available_before_contract`: 기존 임차보증금을 새 계약일 전에 회수할 수 있는지 여부
+
+기존 임차보증금을 계약일 전에 회수할 수 있으면 초기 가용 자기자금에
+포함합니다. 회수할 수 없으면 초기자금에서는 제외하되, 계약 후 회수될
+자금으로 보아 `1년 후 예상 재무자원`에는 포함합니다.
 
 요청:
 
@@ -182,7 +187,8 @@ data: {"code":"ANALYSIS_NOT_FOUND"}
   "monthly_safety_margin": 300000,
   "available_cash": 75000000,
   "minimum_emergency_fund": 10000000,
-  "recoverable_existing_rental_deposit": 20000000
+  "recoverable_existing_rental_deposit": 20000000,
+  "existing_rental_deposit_available_before_contract": false
 }
 ```
 
@@ -196,7 +202,8 @@ data: {"code":"ANALYSIS_NOT_FOUND"}
     "monthly_safety_margin": 300000,
     "available_cash": 75000000,
     "minimum_emergency_fund": 10000000,
-    "recoverable_existing_rental_deposit": 20000000
+    "recoverable_existing_rental_deposit": 20000000,
+    "existing_rental_deposit_available_before_contract": false
   },
   "current_step": "housing_plan",
   "progress": 67
@@ -471,13 +478,15 @@ data: {"status":"completed","stage":"financial_management","progress":100}
       "name": "역삼 원룸",
       "memo": "역세권, 엘리베이터 있음, 채광 좋음",
       "initial_funds": {
+        "available_cash": 75000000,
         "initial_cash_required": 11600000,
-        "post_move_liquid_assets": 83400000,
-        "emergency_fund_gap": 73400000,
+        "post_move_liquid_assets": 63400000,
+        "emergency_fund_gap": 53400000,
         "status": "sufficient"
       },
       "monthly_cash_flow": {
         "monthly_housing_and_transport_cost": 930000,
+        "essential_monthly_outflow": 2430000,
         "actual_monthly_balance": 370000,
         "monthly_budget_margin": 70000,
         "status": "sufficient"
@@ -502,7 +511,9 @@ data: {"status":"completed","stage":"financial_management","progress":100}
         "reason": null
       },
       "calculation_details": {
-        "available_own_funds": 95000000,
+        "available_own_funds": 75000000,
+        "initially_available_existing_deposit": 0,
+        "deferred_existing_deposit": 20000000,
         "self_funded_deposit": 10000000,
         "monthly_deposit_loan_interest": 0,
         "monthly_housing_cash_outflow": 850000,
@@ -521,13 +532,16 @@ data: {"status":"completed","stage":"financial_management","progress":100}
 백분위는 `후보 매물 이하 비교군 수 ÷ 전체 비교군 수 × 100`입니다.
 
 `sample_count`는 조회된 실거래 중 전용면적 허용 범위를 통과한 최종
-비교 표본 수입니다. 응답 형태는 표본 수에 따라 달라집니다.
+비교 표본 수입니다. 먼저 후보 매물 전용면적의 ±15% 범위로 비교하고,
+표본이 10개 미만이면 ±20% 범위로 한 번 확장합니다. 확장 후 표본 수에
+따라 응답 형태가 달라집니다.
 
 - 표본이 10개 이상이면 `comparison_mode`는 `median`입니다.
   `median_equivalent_monthly_cost`, `difference_from_median`,
   `difference_rate_from_median`, `price_percentile`을 제공하고
   `samples`는 빈 배열입니다.
-- 표본이 1~9개이면 `comparison_mode`는 `individual_samples`입니다.
+- ±20%로 확장한 뒤에도 표본이 1~9개이면 `comparison_mode`는
+  `individual_samples`입니다.
   표본 수가 적어 중앙값 비교 지표는 모두 `null`이며 `samples`에 모든
   비교 표본의 매물명, 주소, 계약 정보와 환산 월 임대비용을 제공합니다.
   `candidate_equivalent_monthly_cost`에는 사용자 후보 매물의 환산 월

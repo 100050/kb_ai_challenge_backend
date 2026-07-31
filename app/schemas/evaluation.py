@@ -15,6 +15,7 @@ class CommonFinancialInput(BaseModel):
     available_cash: int
     minimum_emergency_fund: int
     recoverable_existing_rental_deposit: int
+    existing_rental_deposit_available_before_contract: bool
 
 
 class PropertyFinancialInput(BaseModel):
@@ -34,6 +35,7 @@ class PropertyFinancialInput(BaseModel):
 
 
 class InitialFundsResult(BaseModel):
+    available_cash: int
     initial_cash_required: int
     post_move_liquid_assets: int
     emergency_fund_gap: int
@@ -46,6 +48,7 @@ class InitialFundsResult(BaseModel):
 
 class MonthlyCashFlowResult(BaseModel):
     monthly_housing_and_transport_cost: int
+    essential_monthly_outflow: int
     actual_monthly_balance: int
     monthly_budget_margin: int
     status: Literal[
@@ -66,6 +69,8 @@ class AnnualGoalResult(BaseModel):
 
 class CalculationDetails(BaseModel):
     available_own_funds: int
+    initially_available_existing_deposit: int
+    deferred_existing_deposit: int
     self_funded_deposit: int
     monthly_deposit_loan_interest: int
     monthly_housing_cash_outflow: int

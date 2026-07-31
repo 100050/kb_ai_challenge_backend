@@ -134,6 +134,15 @@ class SmallFakeRentClient:
                 legal_dong_name="도곡동",
                 jibun="55",
             ),
+            RentTransaction(
+                deposit=0,
+                monthly_rent=950_000,
+                exclusive_area_m2=71,
+                contract_date=date(2026, 7, 3),
+                property_name="비교 아파트 C",
+                legal_dong_name="역삼동",
+                jibun="77",
+            ),
         ]
 
 
@@ -158,7 +167,7 @@ def test_market_price_returns_all_values_when_samples_are_under_ten() -> None:
     result = asyncio.run(service.evaluate(plan))
 
     assert result.status == "available"
-    assert result.sample_count == 2
+    assert result.sample_count == 3
     assert result.comparison_mode == "individual_samples"
     assert result.median_equivalent_monthly_cost is None
     assert result.difference_from_median is None
@@ -184,7 +193,67 @@ def test_market_price_returns_all_values_when_samples_are_under_ten() -> None:
             "contract_date": date(2026, 7, 2),
             "equivalent_monthly_cost": 883_333,
         },
+        {
+            "name": "비교 아파트 C",
+            "address": "서울특별시 강남구 역삼동 77",
+            "deposit": 0,
+            "monthly_rent": 950_000,
+            "exclusive_area_m2": 71.0,
+            "contract_date": date(2026, 7, 3),
+            "equivalent_monthly_cost": 950_000,
+        },
     ]
+
+
+class ExpandedAreaFakeRentClient:
+    async def fetch(
+        self,
+        property_type: str,
+        district_code: str,
+        deal_year_month: str,
+    ) -> list[RentTransaction]:
+        if deal_year_month != "202607":
+            return []
+        return [
+            RentTransaction(
+                deposit=0,
+                monthly_rent=700_000 + index * 10_000,
+                exclusive_area_m2=60,
+                contract_date=date(2026, 7, index + 1),
+            )
+            for index in range(9)
+        ] + [
+            RentTransaction(
+                deposit=0,
+                monthly_rent=900_000,
+                exclusive_area_m2=71,
+                contract_date=date(2026, 7, 20),
+            ),
+        ]
+
+
+def test_market_price_expands_area_to_twenty_percent_before_sample_mode(
+) -> None:
+    service = MarketPriceService(
+        FakeLegalDongClient(),
+        ExpandedAreaFakeRentClient(),
+        FakeROneClient(),
+        lookback_months=1,
+    )
+    plan = HousingPlan(
+        name="역삼 매물",
+        address="서울특별시 강남구 역삼동",
+        property_type="apartment",
+        legal_dong_code="1168010100",
+        exclusive_area_m2=60,
+        deposit=0,
+        monthly_rent=900_000,
+    )
+
+    result = asyncio.run(service.evaluate(plan))
+
+    assert result.sample_count == 10
+    assert result.comparison_mode == "median"
 
 
 def test_market_price_missing_fields_is_unavailable() -> None:

@@ -18,6 +18,7 @@ def common_input() -> CommonFinancialInput:
         available_cash=75_000_000,
         minimum_emergency_fund=10_000_000,
         recoverable_existing_rental_deposit=20_000_000,
+        existing_rental_deposit_available_before_contract=True,
     )
 
 
@@ -43,12 +44,14 @@ def test_evaluate_property_calculates_three_financial_cards() -> None:
     result = evaluate_property(common_input(), property_input())
 
     assert result.memo == "역세권, 엘리베이터 있음"
+    assert result.initial_funds.available_cash == 75_000_000
     assert result.initial_funds.initial_cash_required == 11_600_000
     assert result.initial_funds.post_move_liquid_assets == 83_400_000
     assert result.initial_funds.emergency_fund_gap == 73_400_000
     assert result.initial_funds.status == "sufficient"
 
     assert result.monthly_cash_flow.monthly_housing_and_transport_cost == 930_000
+    assert result.monthly_cash_flow.essential_monthly_outflow == 2_430_000
     assert result.monthly_cash_flow.actual_monthly_balance == 370_000
     assert result.monthly_cash_flow.monthly_budget_margin == 70_000
     assert result.monthly_cash_flow.status == "sufficient"
@@ -71,6 +74,30 @@ def test_monthly_interest_is_rounded_half_up_to_won() -> None:
     result = evaluate_property(common_input(), housing)
 
     assert result.calculation_details.monthly_deposit_loan_interest == 291_667
+
+
+def test_deferred_existing_deposit_is_excluded_initially_but_added_in_one_year(
+) -> None:
+    immediate = evaluate_property(common_input(), property_input())
+    deferred_common = common_input().model_copy(
+        update={
+            "existing_rental_deposit_available_before_contract": False,
+        },
+    )
+
+    deferred = evaluate_property(deferred_common, property_input())
+
+    assert deferred.initial_funds.post_move_liquid_assets == 63_400_000
+    assert (
+        deferred.calculation_details.initially_available_existing_deposit
+        == 0
+    )
+    assert deferred.calculation_details.deferred_existing_deposit == 20_000_000
+    assert (
+        deferred.annual_goal.expected_resources_after_one_year
+        == immediate.annual_goal.expected_resources_after_one_year
+        == 96_240_000
+    )
 
 
 def test_status_priority_starts_with_initial_funds_and_essential_cash_flow() -> None:

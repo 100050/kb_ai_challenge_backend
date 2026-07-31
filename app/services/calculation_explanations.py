@@ -11,6 +11,7 @@ CalculationMetric = Literal[
     "monthly_deposit_loan_interest",
     "monthly_housing_cash_outflow",
     "monthly_housing_and_transport_cost",
+    "essential_monthly_outflow",
     "base_monthly_balance",
     "actual_monthly_balance",
     "monthly_budget_margin",
@@ -38,15 +39,22 @@ class FormulaDefinition:
 FORMULAS: dict[str, FormulaDefinition] = {
     "available_own_funds": FormulaDefinition(
         "가용 자기자금",
-        "현재 사용 가능 현금 + 회수 가능한 기존 임차보증금",
+        (
+            "현재 사용 가능 현금 + 계약일 전에 회수 가능한 "
+            "기존 임차보증금"
+        ),
         {
             "현재 사용 가능 현금": "analysis.financial_goals.available_cash",
-            "회수 가능한 기존 임차보증금": (
-                "analysis.financial_goals."
-                "recoverable_existing_rental_deposit"
+            "계약일 전 가용 기존 임차보증금": (
+                "candidate.calculation_details."
+                "initially_available_existing_deposit"
             ),
         },
         "candidate.calculation_details.available_own_funds",
+        note=(
+            "기존 임차보증금을 계약일 전에 회수할 수 없는 경우 "
+            "초기자금에는 0원으로 반영합니다."
+        ),
     ),
     "self_funded_deposit": FormulaDefinition(
         "자기부담 보증금",
@@ -131,6 +139,24 @@ FORMULAS: dict[str, FormulaDefinition] = {
         },
         "candidate.monthly_cash_flow.monthly_housing_and_transport_cost",
     ),
+    "essential_monthly_outflow": FormulaDefinition(
+        "필수 월 현금유출",
+        "비주거·교통 생활비 + 기존대출 월 상환액 + 월 주거·교통비",
+        {
+            "비주거·교통 생활비": (
+                "analysis.cash_flow."
+                "monthly_living_expenses_excluding_housing_and_transport"
+            ),
+            "기존대출 월 상환액": (
+                "analysis.cash_flow.existing_loan_monthly_payment"
+            ),
+            "월 주거·교통비": (
+                "candidate.monthly_cash_flow."
+                "monthly_housing_and_transport_cost"
+            ),
+        },
+        "candidate.monthly_cash_flow.essential_monthly_outflow",
+    ),
     "base_monthly_balance": FormulaDefinition(
         "기본 월 잔여금",
         (
@@ -194,10 +220,16 @@ FORMULAS: dict[str, FormulaDefinition] = {
     ),
     "expected_resources_after_one_year": FormulaDefinition(
         "1년 후 예상 재무자원",
-        "입주 후 유동자산 + 12 × (목표 월 저축액 + 실제 월 잔여금)",
+        (
+            "입주 후 유동자산 + 계약 후 회수되는 기존 임차보증금 "
+            "+ 12 × (목표 월 저축액 + 실제 월 잔여금)"
+        ),
         {
             "입주 후 유동자산": (
                 "candidate.initial_funds.post_move_liquid_assets"
+            ),
+            "계약 후 회수되는 기존 임차보증금": (
+                "candidate.calculation_details.deferred_existing_deposit"
             ),
             "목표 월 저축액": (
                 "analysis.financial_goals.target_monthly_savings"
@@ -207,6 +239,10 @@ FORMULAS: dict[str, FormulaDefinition] = {
             ),
         },
         "candidate.annual_goal.expected_resources_after_one_year",
+        note=(
+            "계약일 전에 회수할 수 없어 초기자금에서 제외한 기존 "
+            "임차보증금은 1년 후 예상 재무자원에 포함합니다."
+        ),
     ),
     "annual_financial_surplus": FormulaDefinition(
         "1년 재무 여유·부족액",

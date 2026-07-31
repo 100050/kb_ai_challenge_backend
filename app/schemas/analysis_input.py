@@ -32,6 +32,7 @@ class FinancialGoalsUpdate(BaseModel):
     available_cash: Money | None = None
     minimum_emergency_fund: Money | None = None
     recoverable_existing_rental_deposit: Money | None = None
+    existing_rental_deposit_available_before_contract: bool | None = None
 
 
 class FinancialGoals(BaseModel):
@@ -40,6 +41,7 @@ class FinancialGoals(BaseModel):
     available_cash: int | None
     minimum_emergency_fund: int | None
     recoverable_existing_rental_deposit: int | None
+    existing_rental_deposit_available_before_contract: bool | None
 
 
 class FinancialGoalsResponse(BaseModel):

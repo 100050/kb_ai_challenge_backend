@@ -102,15 +102,20 @@ class MarketPriceService:
             for monthly_transactions in transactions_by_month
             for transaction in monthly_transactions
         ]
-        tolerance = self.area_tolerance_percent / 100
-        minimum_area = plan.exclusive_area_m2 * (1 - tolerance)
-        maximum_area = plan.exclusive_area_m2 * (1 + tolerance)
-        comparable_transactions = [
-            item
-            for item in transactions
-            if item.exclusive_area_m2 is not None
-            and minimum_area <= item.exclusive_area_m2 <= maximum_area
-        ]
+        comparable_transactions = self._filter_by_area(
+            transactions,
+            plan.exclusive_area_m2,
+            self.area_tolerance_percent,
+        )
+        if (
+            len(comparable_transactions) < MINIMUM_MEDIAN_SAMPLE_COUNT
+            and self.area_tolerance_percent < 20
+        ):
+            comparable_transactions = self._filter_by_area(
+                transactions,
+                plan.exclusive_area_m2,
+                20,
+            )
         if not comparable_transactions:
             return self._unavailable("insufficient_comparables")
 
@@ -143,26 +148,29 @@ class MarketPriceService:
                     monthly_rent=plan.monthly_rent,
                     annual_conversion_rate=annual_conversion_rate,
                 ),
-                samples=[
-                    PriceComparableSample(
-                        name=item.property_name,
-                        address=self._sample_address(
-                            district_address,
-                            item.legal_dong_name,
-                            item.jibun,
-                        ),
-                        deposit=item.deposit,
-                        monthly_rent=item.monthly_rent,
-                        exclusive_area_m2=item.exclusive_area_m2,
-                        contract_date=item.contract_date,
-                        equivalent_monthly_cost=equivalent_monthly_cost(
+                samples=sorted(
+                    [
+                        PriceComparableSample(
+                            name=item.property_name,
+                            address=self._sample_address(
+                                district_address,
+                                item.legal_dong_name,
+                                item.jibun,
+                            ),
                             deposit=item.deposit,
                             monthly_rent=item.monthly_rent,
-                            annual_conversion_rate=annual_conversion_rate,
-                        ),
-                    )
-                    for item in comparable_transactions
-                ],
+                            exclusive_area_m2=item.exclusive_area_m2,
+                            contract_date=item.contract_date,
+                            equivalent_monthly_cost=equivalent_monthly_cost(
+                                deposit=item.deposit,
+                                monthly_rent=item.monthly_rent,
+                                annual_conversion_rate=annual_conversion_rate,
+                            ),
+                        )
+                        for item in comparable_transactions
+                    ],
+                    key=lambda sample: sample.equivalent_monthly_cost,
+                ),
             )
 
         comparison = calculate_price_comparison(
@@ -190,6 +198,22 @@ class MarketPriceService:
             ),
             price_percentile=comparison.price_percentile,
         )
+
+    @staticmethod
+    def _filter_by_area(
+        transactions: list,
+        exclusive_area_m2: float,
+        tolerance_percent: float,
+    ) -> list:
+        tolerance = tolerance_percent / 100
+        minimum_area = exclusive_area_m2 * (1 - tolerance)
+        maximum_area = exclusive_area_m2 * (1 + tolerance)
+        return [
+            item
+            for item in transactions
+            if item.exclusive_area_m2 is not None
+            and minimum_area <= item.exclusive_area_m2 <= maximum_area
+        ]
 
     async def evaluate_safely(
         self,

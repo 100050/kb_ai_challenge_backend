@@ -245,6 +245,7 @@ class AnalysisService:
                 analysis.available_cash,
                 analysis.minimum_emergency_fund,
                 analysis.recoverable_existing_rental_deposit,
+                analysis.existing_rental_deposit_available_before_contract,
             )
         )
         housing_plans_complete = bool(housing_plans) and all(
@@ -352,6 +353,9 @@ class AnalysisService:
             minimum_emergency_fund=analysis.minimum_emergency_fund,
             recoverable_existing_rental_deposit=(
                 analysis.recoverable_existing_rental_deposit
+            ),
+            existing_rental_deposit_available_before_contract=(
+                analysis.existing_rental_deposit_available_before_contract
             ),
         )
 

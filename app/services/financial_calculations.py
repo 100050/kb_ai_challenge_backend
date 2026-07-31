@@ -25,9 +25,18 @@ def evaluate_property(
     common: CommonFinancialInput,
     housing: PropertyFinancialInput,
 ) -> PropertyFinancialEvaluation:
+    initially_available_existing_deposit = (
+        common.recoverable_existing_rental_deposit
+        if common.existing_rental_deposit_available_before_contract
+        else 0
+    )
+    deferred_existing_deposit = (
+        0
+        if common.existing_rental_deposit_available_before_contract
+        else common.recoverable_existing_rental_deposit
+    )
     available_own_funds = (
-        common.available_cash
-        + common.recoverable_existing_rental_deposit
+        common.available_cash + initially_available_existing_deposit
     )
     self_funded_deposit = (
         housing.deposit - housing.deposit_loan_amount
@@ -98,6 +107,7 @@ def evaluate_property(
     )
     expected_resources_after_one_year = (
         post_move_liquid_assets
+        + deferred_existing_deposit
         + 12
         * (
             common.target_monthly_savings
@@ -145,6 +155,7 @@ def evaluate_property(
         name=housing.name,
         memo=housing.memo,
         initial_funds=InitialFundsResult(
+            available_cash=common.available_cash,
             initial_cash_required=initial_cash_required,
             post_move_liquid_assets=post_move_liquid_assets,
             emergency_fund_gap=emergency_fund_gap,
@@ -154,6 +165,7 @@ def evaluate_property(
             monthly_housing_and_transport_cost=(
                 monthly_housing_and_transport_cost
             ),
+            essential_monthly_outflow=essential_monthly_outflow,
             actual_monthly_balance=actual_monthly_balance,
             monthly_budget_margin=monthly_budget_margin,
             status=monthly_status,
@@ -169,6 +181,10 @@ def evaluate_property(
         ),
         calculation_details=CalculationDetails(
             available_own_funds=available_own_funds,
+            initially_available_existing_deposit=(
+                initially_available_existing_deposit
+            ),
+            deferred_existing_deposit=deferred_existing_deposit,
             self_funded_deposit=self_funded_deposit,
             monthly_deposit_loan_interest=(
                 monthly_deposit_loan_interest

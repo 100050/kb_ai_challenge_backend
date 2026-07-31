@@ -15,12 +15,13 @@ class FakeInputService:
             "monthly_living_expenses_excluding_housing_and_transport": None,
             "existing_loan_monthly_payment": None,
         }
-        self.financial_goals: dict[str, int | None] = {
+        self.financial_goals: dict[str, int | bool | None] = {
             "target_monthly_savings": None,
             "monthly_safety_margin": None,
             "available_cash": None,
             "minimum_emergency_fund": None,
             "recoverable_existing_rental_deposit": None,
+            "existing_rental_deposit_available_before_contract": None,
         }
 
     async def update_cash_flow(self, analysis_id: UUID, payload: object) -> dict:
@@ -102,6 +103,7 @@ def test_financial_goals_patch_updates_only_provided_fields() -> None:
                     "monthly_safety_margin": 300_000,
                     "minimum_emergency_fund": 10_000_000,
                     "recoverable_existing_rental_deposit": 20_000_000,
+                    "existing_rental_deposit_available_before_contract": False,
                 },
             )
     finally:
@@ -111,6 +113,11 @@ def test_financial_goals_patch_updates_only_provided_fields() -> None:
     assert first.json()["financial_goals"]["monthly_safety_margin"] is None
     assert second.status_code == 200
     assert second.json()["financial_goals"]["target_monthly_savings"] == 700_000
+    assert (
+        second.json()["financial_goals"]
+        ["existing_rental_deposit_available_before_contract"]
+        is False
+    )
     assert second.json()["current_step"] == "housing_plan"
     assert second.json()["progress"] == 67
 

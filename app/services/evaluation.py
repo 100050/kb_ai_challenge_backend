@@ -113,6 +113,7 @@ class EvaluationService:
             "available_cash",
             "minimum_emergency_fund",
             "recoverable_existing_rental_deposit",
+            "existing_rental_deposit_available_before_contract",
         )
         for field in common_fields:
             if getattr(analysis, field) is None:
@@ -166,6 +167,9 @@ class EvaluationService:
             minimum_emergency_fund=analysis.minimum_emergency_fund,
             recoverable_existing_rental_deposit=(
                 analysis.recoverable_existing_rental_deposit
+            ),
+            existing_rental_deposit_available_before_contract=(
+                analysis.existing_rental_deposit_available_before_contract
             ),
         )
 

@@ -123,6 +123,9 @@ def create_chat_agent(
         available_cash: int | None = None,
         minimum_emergency_fund: int | None = None,
         recoverable_existing_rental_deposit: int | None = None,
+        existing_rental_deposit_available_before_contract: (
+            bool | None
+        ) = None,
     ) -> dict[str, Any]:
         """자산과 재무 목표 입력 중 요청한 필드만 수정합니다."""
         payload = FinancialGoalsUpdate.model_validate(
@@ -133,6 +136,9 @@ def create_chat_agent(
                 minimum_emergency_fund=minimum_emergency_fund,
                 recoverable_existing_rental_deposit=(
                     recoverable_existing_rental_deposit
+                ),
+                existing_rental_deposit_available_before_contract=(
+                    existing_rental_deposit_available_before_contract
                 ),
             ),
         )

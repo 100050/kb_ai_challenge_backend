@@ -42,6 +42,7 @@ def test_progress_follows_the_first_incomplete_step() -> None:
     analysis.available_cash = 75_000_000
     analysis.minimum_emergency_fund = 10_000_000
     analysis.recoverable_existing_rental_deposit = 20_000_000
+    analysis.existing_rental_deposit_available_before_contract = True
     AnalysisService._update_progress(analysis, [])
     assert (analysis.current_step, analysis.progress) == ("housing_plan", 67)
 

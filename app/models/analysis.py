@@ -3,7 +3,7 @@ from uuid import UUID, uuid4
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import BigInteger, DateTime, Integer, String
+from sqlalchemy import BigInteger, Boolean, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -73,11 +73,16 @@ class Analysis(Base):
         nullable=True,
     )
 
-    # 새 계약 보증금 지급 전까지 회수 가능한 기존 임차보증금
+    # 향후 회수할 수 있는 기존 임차보증금
     recoverable_existing_rental_deposit: Mapped[int | None] = mapped_column(
         BigInteger,
         nullable=True,
     )
+
+    # 기존 임차보증금을 새 계약일 전에 회수할 수 있는지 여부
+    existing_rental_deposit_available_before_contract: Mapped[
+        bool | None
+    ] = mapped_column(Boolean, nullable=True)
 
     # 이 분석에 연결된 후보 매물과 매물별 대출 및 추가 비용
     housing_plans: Mapped[list["HousingPlan"]] = relationship(
