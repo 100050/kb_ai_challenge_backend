@@ -673,6 +673,10 @@ data: {"status":"completed","stage":"financial_management","progress":100}
 공식으로 계산합니다. 공공데이터에 건물·단지명이 없는 주택 유형은
 표본의 `name`이 `null`일 수 있습니다.
 
+챗봇에서 말하는 `내 집의 환산 월세`, `후보 매물 환산 월세` 및
+`환산 월세`는 `candidate_equivalent_monthly_cost`와 같은 값입니다.
+후보가 여러 개이면 챗봇은 매물명별 값을 구분해 설명합니다.
+
 필요한 비교 필드가 없거나 외부 데이터를 구하지 못하면
 `price_appropriateness.status`는 `unavailable`이고 `reason`에 원인이
 들어갑니다. 이 경우 `comparison_mode`는 `null`, 중앙값 비교 필드는

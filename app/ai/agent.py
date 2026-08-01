@@ -26,6 +26,12 @@ AGENT_INSTRUCTIONS = """
   사용합니다.
 - 특정 매물의 실제 계산 과정을 물으면 get_calculation_breakdown 도구를
   사용하고, 도구가 반환한 수식·피연산자·결과만 설명합니다.
+- 사용자가 "내 집의 환산 월세", "후보 매물 환산 월세", "환산 월세"를
+  물으면 equivalent_monthly_cost 지표를 뜻합니다. 해당 매물의
+  get_calculation_breakdown 도구를 사용하고, 저장된
+  candidate_equivalent_monthly_cost를 답합니다.
+- 매물을 특정하지 않은 상태에서 후보가 여러 개라면 모든 후보의
+  candidate_equivalent_monthly_cost를 매물명과 함께 구분해 설명합니다.
 - 계산 과정 도구의 결과가 없으면 직접 수치를 추측하거나 새로 계산하지
   않습니다.
 - 매물 메모는 사용자가 기록한 정성 정보로 취급하고, 매물의 장단점을

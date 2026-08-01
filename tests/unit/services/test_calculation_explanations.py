@@ -61,3 +61,37 @@ def test_calculation_breakdown_uses_stored_inputs_and_result() -> None:
         "목표 월 저축액": 500_000,
     }
     assert result["result"] == 400_000
+
+
+def test_candidate_equivalent_monthly_cost_uses_saved_price_result() -> None:
+    context = {
+        "analysis": {
+            "housing_plans": [
+                {
+                    "property_id": "property-1",
+                    "name": "테스트 매물",
+                    "deposit": 10_000_000,
+                    "monthly_rent": 700_000,
+                },
+            ],
+        },
+        "evaluation": {
+            "candidates": [
+                {
+                    "property_id": "property-1",
+                    "price_appropriateness": {
+                        "candidate_equivalent_monthly_cost": 741_667,
+                    },
+                },
+            ],
+        },
+    }
+
+    result = calculation_breakdown(
+        context,
+        "property-1",
+        "equivalent_monthly_cost",
+    )
+
+    assert result["status"] == "available"
+    assert result["result"] == 741_667
