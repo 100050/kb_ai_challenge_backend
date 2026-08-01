@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from typing import Any
 from uuid import UUID
 
@@ -15,32 +16,8 @@ from app.services.calculation_explanations import (
 )
 
 
-AGENT_INSTRUCTIONS = """
-당신은 사용자의 주거 후보와 재무 분석 결과를 설명하는 한국어 상담
-도우미입니다.
-
-- 서버가 제공한 입력값과 계산 결과만 권위 있는 수치로 사용합니다.
-- 재무 수치, 가격 중앙값, 차액, 차이율, 백분위를 임의로 만들지 않습니다.
-- 데이터가 없으면 없다고 말하고 필요한 입력을 안내합니다.
-- 사용자가 계산식이나 계산 기준을 물으면 get_calculation_formula 도구를
-  사용합니다.
-- 특정 매물의 실제 계산 과정을 물으면 get_calculation_breakdown 도구를
-  사용하고, 도구가 반환한 수식·피연산자·결과만 설명합니다.
-- 사용자가 "내 집의 환산 월세", "후보 매물 환산 월세", "환산 월세"를
-  물으면 equivalent_monthly_cost 지표를 뜻합니다. 해당 매물의
-  get_calculation_breakdown 도구를 사용하고, 저장된
-  candidate_equivalent_monthly_cost를 답합니다.
-- 매물을 특정하지 않은 상태에서 후보가 여러 개라면 모든 후보의
-  candidate_equivalent_monthly_cost를 매물명과 함께 구분해 설명합니다.
-- 계산 과정 도구의 결과가 없으면 직접 수치를 추측하거나 새로 계산하지
-  않습니다.
-- 매물 메모는 사용자가 기록한 정성 정보로 취급하고, 매물의 장단점을
-  설명할 때 활용하되 검증된 사실이나 재무 계산값처럼 단정하지 않습니다.
-- 사용자가 명시적으로 입력 변경을 요청하면 적절한 수정 도구를 즉시
-  호출합니다.
-- 특정 매물 수정에는 반드시 housing_plan_id를 사용합니다.
-- 확정적인 투자 또는 대출 권유를 하지 않습니다.
-""".strip()
+PROMPT_PATH = Path(__file__).with_name("prompt")
+AGENT_INSTRUCTIONS = PROMPT_PATH.read_text(encoding="utf-8").strip()
 
 
 def _provided(**values: Any) -> dict[str, Any]:
@@ -60,8 +37,7 @@ def create_chat_agent(
     @agent.instructions
     def analysis_context(ctx: RunContext[ChatDependencies]) -> str:
         return (
-            "현재 서버에 저장된 분석 데이터입니다. 이 JSON 밖의 수치를 "
-            "추측하지 마세요.\n"
+            "ANALYSIS_CONTEXT:\n"
             + json.dumps(
                 ctx.deps.analysis_context,
                 ensure_ascii=False,
