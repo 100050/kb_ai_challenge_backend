@@ -81,9 +81,11 @@ def get_chat_service(
         EvaluationRepository(session),
         max_housing_plans=settings.max_housing_plans,
     )
+    evaluation_service = get_evaluation_service(session)
     return ChatService(
         ConversationRepository(session),
         EvaluationRepository(session),
         analysis_service,
+        evaluation_service,
         create_chat_agent(create_ai_model(settings)),
     )

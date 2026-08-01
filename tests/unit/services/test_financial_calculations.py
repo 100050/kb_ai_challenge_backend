@@ -46,6 +46,10 @@ def test_evaluate_property_calculates_three_financial_cards() -> None:
     assert result.memo == "역세권, 엘리베이터 있음"
     assert result.initial_funds.available_cash == 75_000_000
     assert result.initial_funds.available_own_funds == 95_000_000
+    assert (
+        result.initial_funds.contract_available_total_funds
+        == 95_000_000
+    )
     assert result.initial_funds.initial_cash_required == 11_600_000
     assert result.initial_funds.minimum_emergency_fund == 10_000_000
     assert result.initial_funds.post_move_liquid_assets == 83_400_000

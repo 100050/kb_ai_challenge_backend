@@ -37,6 +37,7 @@ class PropertyFinancialInput(BaseModel):
 class InitialFundsResult(BaseModel):
     available_cash: int
     available_own_funds: int
+    contract_available_total_funds: int
     initial_cash_required: int
     post_move_liquid_assets: int
     minimum_emergency_fund: int
@@ -164,7 +165,7 @@ class PropertyFinancialEvaluation(BaseModel):
 
 
 class FinancialEvaluationResult(BaseModel):
-    result_version: Literal[5] = 5
+    result_version: Literal[6] = 6
     analysis_id: UUID
     candidates: list[PropertyFinancialEvaluation]
     generated_at: datetime

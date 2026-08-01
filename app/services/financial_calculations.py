@@ -164,6 +164,7 @@ def evaluate_property(
         initial_funds=InitialFundsResult(
             available_cash=common.available_cash,
             available_own_funds=available_own_funds,
+            contract_available_total_funds=available_own_funds,
             initial_cash_required=initial_cash_required,
             post_move_liquid_assets=post_move_liquid_assets,
             minimum_emergency_fund=common.minimum_emergency_fund,

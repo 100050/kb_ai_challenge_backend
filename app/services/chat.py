@@ -19,6 +19,7 @@ from app.schemas.chat import (
     ChatTurnResponse,
 )
 from app.services.analysis import AnalysisService
+from app.services.evaluation import EvaluationService
 
 
 class ChatService:
@@ -27,11 +28,13 @@ class ChatService:
         repository: ConversationRepository,
         evaluation_repository: EvaluationRepository,
         analysis_service: AnalysisService,
+        evaluation_service: EvaluationService,
         agent: Agent[ChatDependencies, str],
     ) -> None:
         self.repository = repository
         self.evaluation_repository = evaluation_repository
         self.analysis_service = analysis_service
+        self.evaluation_service = evaluation_service
         self.agent = agent
 
     async def send_message(
@@ -142,6 +145,7 @@ class ChatService:
         return ChatDependencies(
             analysis_id=analysis_id,
             analysis_service=self.analysis_service,
+            evaluation_service=self.evaluation_service,
             analysis_context={
                 "analysis": analysis_payload,
                 "evaluation": (

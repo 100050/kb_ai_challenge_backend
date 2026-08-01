@@ -479,7 +479,7 @@ data: {"status":"completed","stage":"financial_management","progress":100}
 
 ```json
 {
-  "result_version": 5,
+  "result_version": 6,
   "analysis_id": "550e8400-e29b-41d4-a716-446655440000",
   "candidates": [
     {
@@ -489,6 +489,7 @@ data: {"status":"completed","stage":"financial_management","progress":100}
       "initial_funds": {
         "available_cash": 75000000,
         "available_own_funds": 75000000,
+        "contract_available_total_funds": 75000000,
         "initial_cash_required": 11600000,
         "post_move_liquid_assets": 63400000,
         "minimum_emergency_fund": 10000000,
@@ -572,11 +573,14 @@ data: {"status":"completed","stage":"financial_management","progress":100}
 }
 ```
 
-`result_version`은 결과 화면 계약 버전입니다. 현재 버전은 `5`이며 이전
+`result_version`은 결과 화면 계약 버전입니다. 현재 버전은 `6`이며 이전
 형식으로 저장된 결과는 다음 분석 요청에서 자동으로 다시 계산합니다.
 
 결과는 매물마다 초기자금·유동성, 월 현금흐름, 1년 재무목표의 세 카드를 제공합니다.
-프론트엔드는 `initial_funds.available_own_funds`를 계약 활용 가능 총자금,
+프론트엔드는 `initial_funds.contract_available_total_funds`를 계약 활용
+가능 총자금으로 표시합니다. 이 값은 `available_cash`와 계약 전에 회수할
+수 있는 기존 임차보증금의 합계입니다. `available_cash`는 기존 보증금을
+더하기 전의 순수 사용 가능 현금이므로 총자금 표시에 사용하지 않습니다.
 `monthly_cash_flow.monthly_income`을 월 현금유입으로 표시할 수 있습니다.
 `overall_financial_status`가 `all_satisfied`이면 세 재무 기준을 모두
 충족한 상태입니다. 그 밖에는 가장 우선해서 확인할 항목을 다음 값 중
@@ -722,8 +726,14 @@ Pydantic AI의 전체 메시지 이력은 PostgreSQL에 저장됩니다. 사용�
 사용자가 소득·생활비, 자산·재무목표 또는 매물별 입력 변경을 요청하면
 에이전트가 기존 단계별 PATCH와 동일한 서비스 및 검증을 사용하는 수정
 Tool을 즉시 실행합니다. 별도의 사용자 승인 요청이나 승인 API는 없습니다.
-입력 변경으로 기존 평가 결과는 삭제되며 새 결과를 보려면 평가 API를
-다시 실행해야 합니다.
+실제 입력값이 변경되면 기존 평가 결과를 무효화한 뒤 같은 Tool 실행 안에서
+새 가격·재무 분석과 AI 종합 해설을 즉시 생성합니다. Tool 결과에는
+`evaluation_regenerated`, `evaluation_id`, `evaluation_status`,
+`evaluation_progress`, `evaluation_result`가 포함되므로 AI는 같은
+응답에서 새 계산 결과를 설명할 수 있습니다. 입력이 불완전해 평가할 수 없는 경우
+입력 변경은 저장하되 `evaluation_regenerated`는 `false`이고
+`reason`은 `analysis_not_ready`입니다. 동일한 값을 다시 요청한 경우에는
+저장된 완료 평가를 재사용합니다.
 
 사용자가 분석 지표의 계산식이나 계산 기준을 질문하면 챗봇은 읽기 전용
 `get_calculation_formula` Tool로 서버 계산식, 변수와 반올림 기준을

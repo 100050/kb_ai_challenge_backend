@@ -14,6 +14,7 @@ from app.services.calculation_explanations import (
     calculation_breakdown,
     calculation_formula,
 )
+from app.services.evaluation import AnalysisNotReady
 
 
 PROMPT_PATH = Path(__file__).with_name("prompt")
@@ -22,6 +23,40 @@ AGENT_INSTRUCTIONS = PROMPT_PATH.read_text(encoding="utf-8").strip()
 
 def _provided(**values: Any) -> dict[str, Any]:
     return {key: value for key, value in values.items() if value is not None}
+
+
+async def _regenerate_evaluation(
+    ctx: RunContext[ChatDependencies],
+) -> dict[str, Any]:
+    try:
+        evaluation = await ctx.deps.evaluation_service.evaluate(
+            ctx.deps.analysis_id,
+        )
+    except AnalysisNotReady as exc:
+        return {
+            "evaluation_regenerated": False,
+            "reason": "analysis_not_ready",
+            "details": exc.details,
+        }
+    if evaluation is None:
+        return {
+            "evaluation_regenerated": False,
+            "reason": "analysis_not_found",
+        }
+    evaluation_result = await ctx.deps.evaluation_service.get_result(
+        ctx.deps.analysis_id,
+    )
+    return {
+        "evaluation_regenerated": True,
+        "evaluation_id": str(evaluation.evaluation_id),
+        "evaluation_status": evaluation.status,
+        "evaluation_progress": evaluation.progress,
+        "evaluation_result": (
+            evaluation_result.model_dump(mode="json")
+            if evaluation_result is not None
+            else None
+        ),
+    }
 
 
 def create_chat_agent(
@@ -91,9 +126,10 @@ def create_chat_agent(
         )
         if result is None:
             return {"updated": False, "reason": "analysis_not_found"}
+        evaluation = await _regenerate_evaluation(ctx)
         return {
             "updated": True,
-            "evaluation_invalidated": True,
+            **evaluation,
             "cash_flow": result.model_dump(mode="json"),
         }
 
@@ -130,9 +166,10 @@ def create_chat_agent(
         )
         if result is None:
             return {"updated": False, "reason": "analysis_not_found"}
+        evaluation = await _regenerate_evaluation(ctx)
         return {
             "updated": True,
-            "evaluation_invalidated": True,
+            **evaluation,
             "financial_goals": result.model_dump(mode="json"),
         }
 
@@ -209,9 +246,10 @@ def create_chat_agent(
         )
         if result is None:
             return {"updated": False, "reason": "housing_plan_not_found"}
+        evaluation = await _regenerate_evaluation(ctx)
         return {
             "updated": True,
-            "evaluation_invalidated": True,
+            **evaluation,
             "housing_plan": result.model_dump(mode="json"),
         }
 
