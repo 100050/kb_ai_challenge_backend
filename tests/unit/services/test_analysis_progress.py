@@ -72,3 +72,16 @@ def test_explicit_null_clears_nested_housing_plan_values() -> None:
     assert housing_plan.brokerage_fee is None
     assert housing_plan.moving_cost is None
     assert housing_plan.other_move_in_cost is None
+
+
+def test_same_housing_plan_patch_is_not_treated_as_a_change() -> None:
+    housing_plan = complete_housing_plan()
+    previous_updated_at = housing_plan.updated_at
+
+    changed = AnalysisService._apply_housing_plan_update(
+        housing_plan,
+        HousingPlanUpdate(monthly_rent=700_000),
+    )
+
+    assert changed is False
+    assert housing_plan.updated_at == previous_updated_at

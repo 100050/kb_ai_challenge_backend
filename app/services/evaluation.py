@@ -1,4 +1,5 @@
-from datetime import datetime, timezone
+from copy import deepcopy
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from uuid import UUID
 
@@ -23,6 +24,9 @@ class AnalysisNotReady(Exception):
         self.details = details
 
 
+PRICE_REFRESH_INTERVAL = timedelta(hours=24)
+
+
 class EvaluationService:
     def __init__(
         self,
@@ -40,6 +44,41 @@ class EvaluationService:
         analysis = await self.analysis_repository.get(analysis_id)
         if analysis is None:
             return None
+        previous_evaluation = await self.evaluation_repository.get(
+            analysis_id,
+        )
+        if (
+            previous_evaluation is not None
+            and previous_evaluation.status == "completed"
+            and previous_evaluation.result is not None
+        ):
+            generated_at = self._result_generated_at(
+                previous_evaluation.result,
+            )
+            if (
+                generated_at is not None
+                and datetime.now(timezone.utc) - generated_at
+                < PRICE_REFRESH_INTERVAL
+            ):
+                return EvaluationStarted(
+                    evaluation_id=previous_evaluation.id,
+                    status="completed",
+                    progress=100,
+                )
+            refreshed = await self._refresh_prices(
+                analysis_id,
+                previous_evaluation.result,
+            )
+            if refreshed is not None:
+                evaluation = await self.evaluation_repository.save_completed(
+                    analysis_id,
+                    refreshed,
+                )
+                return EvaluationStarted(
+                    evaluation_id=evaluation.id,
+                    status="completed",
+                    progress=100,
+                )
         plans = await self.housing_plan_repository.list(analysis_id)
         details = self._readiness_errors(analysis, plans)
         if details:
@@ -75,6 +114,58 @@ class EvaluationService:
             status="completed",
             progress=100,
         )
+
+    async def _refresh_prices(
+        self,
+        analysis_id: UUID,
+        previous_result: dict,
+    ) -> dict | None:
+        plans = await self.housing_plan_repository.list(analysis_id)
+        candidates = previous_result.get("candidates")
+        if not isinstance(candidates, list):
+            return None
+        candidates_by_property_id = {
+            str(candidate.get("property_id")): candidate
+            for candidate in candidates
+            if isinstance(candidate, dict)
+        }
+        if set(candidates_by_property_id) != {
+            str(plan.id) for plan in plans
+        }:
+            return None
+
+        refreshed_result = deepcopy(previous_result)
+        refreshed_candidates = {
+            str(candidate["property_id"]): candidate
+            for candidate in refreshed_result["candidates"]
+        }
+        for plan in plans:
+            price_result = await self.market_price_service.evaluate_safely(plan)
+            refreshed_candidates[str(plan.id)]["price_appropriateness"] = (
+                price_result.model_dump(mode="json")
+            )
+        refreshed_result["generated_at"] = datetime.now(
+            timezone.utc,
+        ).isoformat()
+        return refreshed_result
+
+    @staticmethod
+    def _result_generated_at(result: dict) -> datetime | None:
+        value = result.get("generated_at")
+        if isinstance(value, datetime):
+            generated_at = value
+        elif isinstance(value, str):
+            try:
+                generated_at = datetime.fromisoformat(
+                    value.replace("Z", "+00:00"),
+                )
+            except ValueError:
+                return None
+        else:
+            return None
+        if generated_at.tzinfo is None:
+            return generated_at.replace(tzinfo=timezone.utc)
+        return generated_at.astimezone(timezone.utc)
 
     async def get_status(self, analysis_id: UUID) -> EvaluationStatus | None:
         evaluation = await self.evaluation_repository.get(analysis_id)

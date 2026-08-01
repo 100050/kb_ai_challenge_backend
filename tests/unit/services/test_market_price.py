@@ -19,7 +19,7 @@ class FakeRentClient:
         district_code: str,
         deal_year_month: str,
     ) -> list[RentTransaction]:
-        if deal_year_month != "202607":
+        if deal_year_month != date.today().strftime("%Y%m"):
             return []
         return [
             RentTransaction(
@@ -48,7 +48,11 @@ class FakeROneClient:
         *,
         parent_region_name: str | None = None,
     ) -> Decimal | None:
-        return Decimal("5") if year_month == "202607" else None
+        return (
+            Decimal("5")
+            if year_month == date.today().strftime("%Y%m")
+            else None
+        )
 
 
 def test_market_price_uses_twenty_four_months_and_fifteen_percent_area_by_default(
@@ -113,7 +117,7 @@ class SmallFakeRentClient:
         district_code: str,
         deal_year_month: str,
     ) -> list[RentTransaction]:
-        if deal_year_month != "202607":
+        if deal_year_month != date.today().strftime("%Y%m"):
             return []
         return [
             RentTransaction(
@@ -212,7 +216,7 @@ class ExpandedAreaFakeRentClient:
         district_code: str,
         deal_year_month: str,
     ) -> list[RentTransaction]:
-        if deal_year_month != "202607":
+        if deal_year_month != date.today().strftime("%Y%m"):
             return []
         return [
             RentTransaction(

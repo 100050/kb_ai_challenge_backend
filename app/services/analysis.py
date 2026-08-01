@@ -66,7 +66,14 @@ class AnalysisService:
         if analysis is None:
             return None
 
-        for field, value in payload.model_dump(exclude_unset=True).items():
+        updates = payload.model_dump(exclude_unset=True)
+        if all(
+            getattr(analysis, field) == value
+            for field, value in updates.items()
+        ):
+            return self._cash_flow_response(analysis)
+
+        for field, value in updates.items():
             setattr(analysis, field, value)
 
         plans = await self.housing_plan_repository.list(analysis_id)
@@ -84,7 +91,14 @@ class AnalysisService:
         if analysis is None:
             return None
 
-        for field, value in payload.model_dump(exclude_unset=True).items():
+        updates = payload.model_dump(exclude_unset=True)
+        if all(
+            getattr(analysis, field) == value
+            for field, value in updates.items()
+        ):
+            return self._financial_goals_response(analysis)
+
+        for field, value in updates.items():
             setattr(analysis, field, value)
 
         plans = await self.housing_plan_repository.list(analysis_id)
@@ -153,7 +167,9 @@ class AnalysisService:
         if housing_plan is None:
             return None
 
-        self._apply_housing_plan_update(housing_plan, payload)
+        changed = self._apply_housing_plan_update(housing_plan, payload)
+        if not changed:
+            return self._housing_plan_response(housing_plan)
         plans = await self.housing_plan_repository.list(analysis_id)
         self._update_progress(analysis, plans)
         await self.evaluation_repository.delete(analysis_id)
@@ -186,7 +202,10 @@ class AnalysisService:
     def _apply_housing_plan_update(
         housing_plan: HousingPlan,
         payload: HousingPlanCreate | HousingPlanUpdate,
-    ) -> None:
+    ) -> bool:
+        previous_state = AnalysisService._housing_plan_input_state(
+            housing_plan,
+        )
         updates = payload.model_dump(exclude_unset=True)
         has_loan_plan = "loan_plan" in updates
         has_additional_costs = "additional_costs" in updates
@@ -222,7 +241,35 @@ class AnalysisService:
                     "other_move_in_cost"
                 ]
 
-        housing_plan.updated_at = datetime.now(timezone.utc)
+        changed = (
+            AnalysisService._housing_plan_input_state(housing_plan)
+            != previous_state
+        )
+        if changed:
+            housing_plan.updated_at = datetime.now(timezone.utc)
+        return changed
+
+    @staticmethod
+    def _housing_plan_input_state(housing_plan: HousingPlan) -> tuple:
+        return (
+            housing_plan.name,
+            housing_plan.memo,
+            housing_plan.address,
+            housing_plan.property_type,
+            housing_plan.legal_dong_code,
+            housing_plan.exclusive_area_m2,
+            housing_plan.housing_type,
+            housing_plan.deposit,
+            housing_plan.monthly_rent,
+            housing_plan.maintenance_fee,
+            housing_plan.utilities,
+            housing_plan.transportation_cost,
+            housing_plan.deposit_loan_amount,
+            housing_plan.annual_interest_rate,
+            housing_plan.brokerage_fee,
+            housing_plan.moving_cost,
+            housing_plan.other_move_in_cost,
+        )
 
     @staticmethod
     def _update_progress(
