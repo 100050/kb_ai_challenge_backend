@@ -21,7 +21,7 @@ from app.services.price_appropriateness import (
 )
 
 
-MINIMUM_MEDIAN_SAMPLE_COUNT = 10
+MINIMUM_MEDIAN_SAMPLE_COUNT = 30
 
 R_ONE_PARENT_REGION_NAMES = {
     "서울특별시": "서울",

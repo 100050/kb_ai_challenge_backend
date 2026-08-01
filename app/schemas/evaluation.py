@@ -68,7 +68,7 @@ class AnnualGoalResult(BaseModel):
     annual_financial_target: int
     expected_resources_after_one_year: int
     annual_financial_surplus: int
-    annual_goal_achievement_rate: float
+    annual_goal_achievement_rate: float | None
     status: Literal["below_target", "target_met", "above_target"]
 
 
@@ -164,7 +164,7 @@ class PropertyFinancialEvaluation(BaseModel):
 
 
 class FinancialEvaluationResult(BaseModel):
-    result_version: Literal[3] = 3
+    result_version: Literal[5] = 5
     analysis_id: UUID
     candidates: list[PropertyFinancialEvaluation]
     generated_at: datetime

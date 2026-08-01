@@ -119,11 +119,7 @@ def evaluate_property(
         - annual_financial_target
     )
     if annual_financial_target == 0:
-        achievement_rate = (
-            Decimal("100.00")
-            if expected_resources_after_one_year >= 0
-            else Decimal("0.00")
-        )
+        achievement_rate = None
     else:
         achievement_rate = (
             Decimal(expected_resources_after_one_year)
@@ -192,7 +188,11 @@ def evaluate_property(
                 expected_resources_after_one_year
             ),
             annual_financial_surplus=annual_financial_surplus,
-            annual_goal_achievement_rate=float(achievement_rate),
+            annual_goal_achievement_rate=(
+                float(achievement_rate)
+                if achievement_rate is not None
+                else None
+            ),
             status=annual_status,
         ),
         overall_financial_status=overall_financial_status,

@@ -270,7 +270,7 @@ FORMULAS: dict[str, FormulaDefinition] = {
         },
         "candidate.annual_goal.annual_goal_achievement_rate",
         "소수점 둘째 자리 반올림",
-        "목표액이 0원이면 예상 자원이 0원 이상일 때 100%입니다.",
+        "1년 재무목표액이 0원이면 달성률은 계산하지 않습니다.",
     ),
     "equivalent_monthly_cost": FormulaDefinition(
         "환산 월 임대비용",

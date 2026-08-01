@@ -122,7 +122,7 @@ def test_status_priority_starts_with_initial_funds_and_essential_cash_flow() -> 
     assert result.warnings[0].code == "INSUFFICIENT_INITIAL_FUNDS"
 
 
-def test_zero_annual_target_has_defined_achievement_rate() -> None:
+def test_zero_annual_target_does_not_calculate_achievement_rate() -> None:
     common = common_input().model_copy(
         update={
             "minimum_emergency_fund": 0,
@@ -133,4 +133,4 @@ def test_zero_annual_target_has_defined_achievement_rate() -> None:
     result = evaluate_property(common, property_input())
 
     assert result.annual_goal.annual_financial_target == 0
-    assert result.annual_goal.annual_goal_achievement_rate == 100.0
+    assert result.annual_goal.annual_goal_achievement_rate is None

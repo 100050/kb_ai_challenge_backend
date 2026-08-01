@@ -54,7 +54,7 @@ class EvaluationService:
             previous_evaluation is not None
             and previous_evaluation.status == "completed"
             and previous_evaluation.result is not None
-            and previous_evaluation.result.get("result_version") == 3
+            and previous_evaluation.result.get("result_version") == 5
         ):
             generated_at = self._result_generated_at(
                 previous_evaluation.result,

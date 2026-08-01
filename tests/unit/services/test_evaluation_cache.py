@@ -96,7 +96,7 @@ def test_evaluate_returns_completed_evaluation_when_inputs_are_unchanged(
         status="completed",
         progress=100,
         result={
-            "result_version": 3,
+            "result_version": 5,
             "analysis_id": str(analysis.id),
             "candidates": [],
             "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -126,7 +126,7 @@ def test_evaluate_refreshes_only_price_after_twenty_four_hours() -> None:
         status="completed",
         progress=100,
         result={
-            "result_version": 3,
+            "result_version": 5,
             "analysis_id": str(analysis.id),
             "candidates": [
                 {

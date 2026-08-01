@@ -28,7 +28,7 @@ class FakeRentClient:
                 exclusive_area_m2=60,
                 contract_date=date(2026, 7, index + 1),
             )
-            for index in range(10)
+            for index in range(30)
         ] + [
             RentTransaction(
                 deposit=0,
@@ -101,12 +101,12 @@ def test_market_price_filters_similar_area_and_returns_metrics() -> None:
     result = asyncio.run(service.evaluate(plan))
 
     assert result.status == "available"
-    assert result.sample_count == 10
+    assert result.sample_count == 30
     assert result.comparison_mode == "median"
-    assert result.median_equivalent_monthly_cost == 925_000
-    assert result.difference_from_median == -25_000
-    assert result.difference_rate_from_median == -2.7
-    assert result.price_percentile == 50
+    assert result.median_equivalent_monthly_cost == 1_425_000
+    assert result.difference_from_median == -525_000
+    assert result.difference_rate_from_median == -36.84
+    assert result.price_percentile == 16.67
     assert result.candidate_equivalent_monthly_cost == 900_000
     assert result.comparison_criteria is not None
     assert result.comparison_criteria.lookback_months == 1
@@ -156,7 +156,7 @@ class SmallFakeRentClient:
         ]
 
 
-def test_market_price_returns_all_values_when_samples_are_under_ten() -> None:
+def test_market_price_returns_all_values_when_samples_are_under_thirty() -> None:
     service = MarketPriceService(
         FakeLegalDongClient(),
         SmallFakeRentClient(),
@@ -231,7 +231,7 @@ class ExpandedAreaFakeRentClient:
                 exclusive_area_m2=60,
                 contract_date=date(2026, 7, index + 1),
             )
-            for index in range(9)
+            for index in range(29)
         ] + [
             RentTransaction(
                 deposit=0,
@@ -262,7 +262,7 @@ def test_market_price_expands_area_to_twenty_percent_before_sample_mode(
 
     result = asyncio.run(service.evaluate(plan))
 
-    assert result.sample_count == 10
+    assert result.sample_count == 30
     assert result.comparison_mode == "median"
     assert result.comparison_criteria is not None
     assert result.comparison_criteria.area_tolerance_percent == 20

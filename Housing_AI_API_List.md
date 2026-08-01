@@ -479,7 +479,7 @@ data: {"status":"completed","stage":"financial_management","progress":100}
 
 ```json
 {
-  "result_version": 3,
+  "result_version": 5,
   "analysis_id": "550e8400-e29b-41d4-a716-446655440000",
   "candidates": [
     {
@@ -515,7 +515,7 @@ data: {"status":"completed","stage":"financial_management","progress":100}
       "overall_financial_status": "all_satisfied",
       "price_appropriateness": {
         "status": "available",
-        "sample_count": 18,
+        "sample_count": 38,
         "comparison_mode": "median",
         "median_equivalent_monthly_cost": 880000,
         "difference_from_median": 40000,
@@ -572,7 +572,7 @@ data: {"status":"completed","stage":"financial_management","progress":100}
 }
 ```
 
-`result_version`은 결과 화면 계약 버전입니다. 현재 버전은 `3`이며 이전
+`result_version`은 결과 화면 계약 버전입니다. 현재 버전은 `5`이며 이전
 형식으로 저장된 결과는 다음 분석 요청에서 자동으로 다시 계산합니다.
 
 결과는 매물마다 초기자금·유동성, 월 현금흐름, 1년 재무목표의 세 카드를 제공합니다.
@@ -588,6 +588,11 @@ data: {"status":"completed","stage":"financial_management","progress":100}
 - `savings_target_shortfall`
 - `safety_margin_shortfall`
 - `annual_goal_shortfall`
+
+`annual_financial_target`이 `0`이면 0으로 나눌 수 없으므로
+`annual_goal_achievement_rate`는 계산하지 않고 `null`로 반환합니다.
+`expected_resources_after_one_year`와 `annual_financial_surplus`는 계속
+계산합니다.
 
 가격 비교가 가능한 매물에는 비교군의 환산 월 임대비용 중앙값,
 중앙값과의 가격 차액·차이율 및 백분위를 추가로 제공합니다.
@@ -606,21 +611,21 @@ data: {"status":"completed","stage":"financial_management","progress":100}
 
 `sample_count`는 조회된 실거래 중 전용면적 허용 범위를 통과한 최종
 비교 표본 수입니다. 먼저 후보 매물 전용면적의 ±15% 범위로 비교하고,
-표본이 10개 미만이면 ±20% 범위로 한 번 확장합니다. 확장 후 표본 수에
+표본이 30개 미만이면 ±20% 범위로 한 번 확장합니다. 확장 후 표본 수에
 따라 응답 형태가 달라집니다.
 
-- 표본이 10개 이상이면 `comparison_mode`는 `median`입니다.
+- 표본이 30개 이상이면 `comparison_mode`는 `median`입니다.
   `median_equivalent_monthly_cost`, `difference_from_median`,
   `difference_rate_from_median`, `price_percentile`을 제공하고
   `samples`는 빈 배열입니다.
-- ±20%로 확장한 뒤에도 표본이 1~9개이면 `comparison_mode`는
+- ±20%로 확장한 뒤에도 표본이 1~29개이면 `comparison_mode`는
   `individual_samples`입니다.
   표본 수가 적어 중앙값 비교 지표는 모두 `null`이며 `samples`에 모든
   비교 표본의 매물명, 주소, 계약 정보와 환산 월 임대비용을 제공합니다.
   `candidate_equivalent_monthly_cost`에는 사용자 후보 매물의 환산 월
   임대비용을 제공합니다.
 
-표본이 10개 미만인 경우:
+표본이 30개 미만인 경우:
 
 ```json
 {
