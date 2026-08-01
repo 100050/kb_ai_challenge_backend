@@ -107,6 +107,12 @@ def test_market_price_filters_similar_area_and_returns_metrics() -> None:
     assert result.difference_from_median == -25_000
     assert result.difference_rate_from_median == -2.7
     assert result.price_percentile == 50
+    assert result.candidate_equivalent_monthly_cost == 900_000
+    assert result.comparison_criteria is not None
+    assert result.comparison_criteria.lookback_months == 1
+    assert result.comparison_criteria.district_name == "강남구"
+    assert result.comparison_criteria.property_type == "apartment"
+    assert result.comparison_criteria.area_tolerance_percent == 10
     assert result.samples == []
 
 
@@ -258,6 +264,8 @@ def test_market_price_expands_area_to_twenty_percent_before_sample_mode(
 
     assert result.sample_count == 10
     assert result.comparison_mode == "median"
+    assert result.comparison_criteria is not None
+    assert result.comparison_criteria.area_tolerance_percent == 20
 
 
 def test_market_price_missing_fields_is_unavailable() -> None:

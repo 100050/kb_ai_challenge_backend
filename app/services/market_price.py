@@ -12,6 +12,7 @@ from app.models.housing_plan import HousingPlan
 from app.schemas.evaluation import (
     PriceAppropriatenessResult,
     PriceComparableSample,
+    PriceComparisonCriteria,
 )
 from app.services.price_appropriateness import (
     ComparableRent,
@@ -107,6 +108,7 @@ class MarketPriceService:
             plan.exclusive_area_m2,
             self.area_tolerance_percent,
         )
+        used_area_tolerance_percent = self.area_tolerance_percent
         if (
             len(comparable_transactions) < MINIMUM_MEDIAN_SAMPLE_COUNT
             and self.area_tolerance_percent < 20
@@ -116,6 +118,7 @@ class MarketPriceService:
                 plan.exclusive_area_m2,
                 20,
             )
+            used_area_tolerance_percent = 20
         if not comparable_transactions:
             return self._unavailable("insufficient_comparables")
 
@@ -136,18 +139,26 @@ class MarketPriceService:
             )
 
         sample_count = len(comparable_transactions)
+        annual_conversion_rate = Decimal(conversion_rate)
+        candidate_equivalent_cost = equivalent_monthly_cost(
+            deposit=plan.deposit,
+            monthly_rent=plan.monthly_rent,
+            annual_conversion_rate=annual_conversion_rate,
+        )
+        comparison_criteria = PriceComparisonCriteria(
+            lookback_months=self.lookback_months,
+            district_name=district_name,
+            property_type=plan.property_type,
+            area_tolerance_percent=used_area_tolerance_percent,
+        )
         if sample_count < MINIMUM_MEDIAN_SAMPLE_COUNT:
-            annual_conversion_rate = Decimal(conversion_rate)
             district_address = self._district_address(plan.address)
             return PriceAppropriatenessResult(
                 status="available",
                 sample_count=sample_count,
                 comparison_mode="individual_samples",
-                candidate_equivalent_monthly_cost=equivalent_monthly_cost(
-                    deposit=plan.deposit,
-                    monthly_rent=plan.monthly_rent,
-                    annual_conversion_rate=annual_conversion_rate,
-                ),
+                candidate_equivalent_monthly_cost=candidate_equivalent_cost,
+                comparison_criteria=comparison_criteria,
                 samples=sorted(
                     [
                         PriceComparableSample(
@@ -197,6 +208,8 @@ class MarketPriceService:
                 comparison.difference_rate_from_median
             ),
             price_percentile=comparison.price_percentile,
+            candidate_equivalent_monthly_cost=candidate_equivalent_cost,
+            comparison_criteria=comparison_criteria,
         )
 
     @staticmethod

@@ -5,6 +5,7 @@ from uuid import UUID
 
 from app.models.analysis import Analysis
 from app.models.housing_plan import HousingPlan
+from app.ai.interpretation import AIInterpretationGenerator
 from app.repositories.analysis import AnalysisRepository
 from app.repositories.evaluation import EvaluationRepository
 from app.repositories.housing_plan import HousingPlanRepository
@@ -34,11 +35,13 @@ class EvaluationService:
         housing_plan_repository: HousingPlanRepository,
         evaluation_repository: EvaluationRepository,
         market_price_service: MarketPriceService,
+        interpretation_generator: AIInterpretationGenerator | None = None,
     ) -> None:
         self.analysis_repository = analysis_repository
         self.housing_plan_repository = housing_plan_repository
         self.evaluation_repository = evaluation_repository
         self.market_price_service = market_price_service
+        self.interpretation_generator = interpretation_generator
 
     async def evaluate(self, analysis_id: UUID) -> EvaluationStarted | None:
         analysis = await self.analysis_repository.get(analysis_id)
@@ -51,6 +54,7 @@ class EvaluationService:
             previous_evaluation is not None
             and previous_evaluation.status == "completed"
             and previous_evaluation.result is not None
+            and previous_evaluation.result.get("result_version") == 3
         ):
             generated_at = self._result_generated_at(
                 previous_evaluation.result,
@@ -98,6 +102,20 @@ class EvaluationService:
                 ),
             )
 
+        interpretations = await self._generate_interpretations(
+            [candidate.model_dump(mode="json") for candidate in candidates],
+        )
+        candidates = [
+            candidate.model_copy(
+                update={
+                    "ai_interpretation": interpretations.get(
+                        str(candidate.property_id),
+                    ),
+                },
+            )
+            for candidate in candidates
+        ]
+
         result = FinancialEvaluationResult(
             analysis_id=analysis_id,
             candidates=candidates,
@@ -144,10 +162,30 @@ class EvaluationService:
             refreshed_candidates[str(plan.id)]["price_appropriateness"] = (
                 price_result.model_dump(mode="json")
             )
+        for candidate in refreshed_result["candidates"]:
+            candidate["ai_interpretation"] = None
+        interpretations = await self._generate_interpretations(
+            refreshed_result["candidates"],
+        )
+        for property_id, interpretation in interpretations.items():
+            refreshed_candidates[property_id]["ai_interpretation"] = (
+                interpretation.model_dump(mode="json")
+            )
         refreshed_result["generated_at"] = datetime.now(
             timezone.utc,
         ).isoformat()
         return refreshed_result
+
+    async def _generate_interpretations(
+        self,
+        candidates: list[dict],
+    ) -> dict:
+        if self.interpretation_generator is None:
+            return {}
+        try:
+            return await self.interpretation_generator.generate(candidates)
+        except Exception:
+            return {}
 
     @staticmethod
     def _result_generated_at(result: dict) -> datetime | None:

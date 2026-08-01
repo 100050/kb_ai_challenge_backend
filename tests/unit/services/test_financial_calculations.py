@@ -45,13 +45,18 @@ def test_evaluate_property_calculates_three_financial_cards() -> None:
 
     assert result.memo == "역세권, 엘리베이터 있음"
     assert result.initial_funds.available_cash == 75_000_000
+    assert result.initial_funds.available_own_funds == 95_000_000
     assert result.initial_funds.initial_cash_required == 11_600_000
+    assert result.initial_funds.minimum_emergency_fund == 10_000_000
     assert result.initial_funds.post_move_liquid_assets == 83_400_000
     assert result.initial_funds.emergency_fund_gap == 73_400_000
     assert result.initial_funds.status == "sufficient"
 
     assert result.monthly_cash_flow.monthly_housing_and_transport_cost == 930_000
+    assert result.monthly_cash_flow.monthly_income == 3_500_000
     assert result.monthly_cash_flow.essential_monthly_outflow == 2_430_000
+    assert result.monthly_cash_flow.base_monthly_balance == 1_070_000
+    assert result.monthly_cash_flow.target_monthly_savings == 700_000
     assert result.monthly_cash_flow.actual_monthly_balance == 370_000
     assert result.monthly_cash_flow.monthly_budget_margin == 70_000
     assert result.monthly_cash_flow.status == "sufficient"
@@ -61,6 +66,7 @@ def test_evaluate_property_calculates_three_financial_cards() -> None:
     assert result.annual_goal.annual_financial_surplus == 77_840_000
     assert result.annual_goal.annual_goal_achievement_rate == 523.04
     assert result.annual_goal.status == "above_target"
+    assert result.overall_financial_status == "all_satisfied"
 
 
 def test_monthly_interest_is_rounded_half_up_to_won() -> None:

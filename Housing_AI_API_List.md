@@ -479,6 +479,7 @@ data: {"status":"completed","stage":"financial_management","progress":100}
 
 ```json
 {
+  "result_version": 3,
   "analysis_id": "550e8400-e29b-41d4-a716-446655440000",
   "candidates": [
     {
@@ -487,14 +488,19 @@ data: {"status":"completed","stage":"financial_management","progress":100}
       "memo": "역세권, 엘리베이터 있음, 채광 좋음",
       "initial_funds": {
         "available_cash": 75000000,
+        "available_own_funds": 75000000,
         "initial_cash_required": 11600000,
         "post_move_liquid_assets": 63400000,
+        "minimum_emergency_fund": 10000000,
         "emergency_fund_gap": 53400000,
         "status": "sufficient"
       },
       "monthly_cash_flow": {
+        "monthly_income": 3500000,
         "monthly_housing_and_transport_cost": 930000,
         "essential_monthly_outflow": 2430000,
+        "base_monthly_balance": 1070000,
+        "target_monthly_savings": 700000,
         "actual_monthly_balance": 370000,
         "monthly_budget_margin": 70000,
         "status": "sufficient"
@@ -506,6 +512,7 @@ data: {"status":"completed","stage":"financial_management","progress":100}
         "annual_goal_achievement_rate": 523.04,
         "status": "above_target"
       },
+      "overall_financial_status": "all_satisfied",
       "price_appropriateness": {
         "status": "available",
         "sample_count": 18,
@@ -514,9 +521,40 @@ data: {"status":"completed","stage":"financial_management","progress":100}
         "difference_from_median": 40000,
         "difference_rate_from_median": 4.55,
         "price_percentile": 72.2,
-        "candidate_equivalent_monthly_cost": null,
+        "candidate_equivalent_monthly_cost": 920000,
+        "comparison_criteria": {
+          "lookback_months": 12,
+          "district_name": "강남구",
+          "property_type": "apartment",
+          "area_tolerance_percent": 15
+        },
         "samples": [],
         "reason": null
+      },
+      "ai_interpretation": {
+        "summary": [
+          "환산 월 임대비용이 비교군 중앙값보다 4.55% 높습니다.",
+          "초기자금과 최소 비상자금을 모두 충족합니다.",
+          "현재 조건이 유지되면 1년 재무목표를 초과할 것으로 예상됩니다."
+        ],
+        "strengths": {
+          "title": "초기자금·비상자금·재무목표 충족",
+          "detail": "입주 후 유동자산과 재무목표 달성률을 근거로 한 해설입니다."
+        },
+        "burdens": {
+          "title": "비교군보다 높은 환산 월 임대비용",
+          "detail": "중앙값 대비 가격 차액과 차이율을 함께 확인하세요."
+        },
+        "things_to_check": {
+          "title": "정성적 주거 조건 확인",
+          "detail": "매물 메모의 역세권·엘리베이터·채광 정보를 현장에서 확인하세요."
+        },
+        "evidence_count": 6,
+        "suggested_questions": [
+          "왜 가격 부담이 높나요?",
+          "월세가 5만 원 오르면 어떻게 되나요?",
+          "다른 매물과 차이를 정리해줘"
+        ]
       },
       "calculation_details": {
         "available_own_funds": 75000000,
@@ -534,10 +572,37 @@ data: {"status":"completed","stage":"financial_management","progress":100}
 }
 ```
 
+`result_version`은 결과 화면 계약 버전입니다. 현재 버전은 `3`이며 이전
+형식으로 저장된 결과는 다음 분석 요청에서 자동으로 다시 계산합니다.
+
 결과는 매물마다 초기자금·유동성, 월 현금흐름, 1년 재무목표의 세 카드를 제공합니다.
+프론트엔드는 `initial_funds.available_own_funds`를 계약 활용 가능 총자금,
+`monthly_cash_flow.monthly_income`을 월 현금유입으로 표시할 수 있습니다.
+`overall_financial_status`가 `all_satisfied`이면 세 재무 기준을 모두
+충족한 상태입니다. 그 밖에는 가장 우선해서 확인할 항목을 다음 값 중
+하나로 제공합니다.
+
+- `initial_funds_shortfall`
+- `emergency_fund_shortfall`
+- `essential_expense_deficit`
+- `savings_target_shortfall`
+- `safety_margin_shortfall`
+- `annual_goal_shortfall`
+
 가격 비교가 가능한 매물에는 비교군의 환산 월 임대비용 중앙값,
 중앙값과의 가격 차액·차이율 및 백분위를 추가로 제공합니다.
 백분위는 `후보 매물 이하 비교군 수 ÷ 전체 비교군 수 × 100`입니다.
+`comparison_criteria`는 가격 비교에 실제 사용한 조회 개월 수, 지역,
+주택유형 및 최종 면적 허용범위를 제공합니다. 15% 표본이 부족해 20%로
+확장했다면 `area_tolerance_percent`는 `20`입니다.
+
+`ai_interpretation`은 Pydantic AI의 구조화 출력이며 매물별 가격·재무
+결과와 사용자가 작성한 매물 메모만 근거로 생성합니다. 임의의 재무 수치를
+계산하거나 계약·추천 여부를 결정하지 않습니다. AI 호출에 실패하면 해당
+값은 `null`이지만 가격 및 재무 분석 결과는 정상적으로 반환됩니다.
+저장된 결과의 가격 적정성을 24시간 후 갱신할 때 AI 종합 해설도 함께
+갱신합니다. `suggested_questions`는 기존 챗봇 메시지 API에 그대로 보낼
+수 있는 추천 질문입니다.
 
 `sample_count`는 조회된 실거래 중 전용면적 허용 범위를 통과한 최종
 비교 표본 수입니다. 먼저 후보 매물 전용면적의 ±15% 범위로 비교하고,
@@ -567,6 +632,12 @@ data: {"status":"completed","stage":"financial_management","progress":100}
   "difference_rate_from_median": null,
   "price_percentile": null,
   "candidate_equivalent_monthly_cost": 900000,
+  "comparison_criteria": {
+    "lookback_months": 12,
+    "district_name": "강남구",
+    "property_type": "apartment",
+    "area_tolerance_percent": 20
+  },
   "samples": [
     {
       "name": "비교 아파트 A",

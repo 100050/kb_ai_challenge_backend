@@ -8,6 +8,7 @@ from app.clients.legal_dong import LegalDongClient
 from app.clients.r_one import ROneClient
 from app.clients.real_estate import RentTransactionClient
 from app.ai.agent import create_chat_agent
+from app.ai.interpretation import create_interpretation_generator
 from app.ai.model_factory import create_ai_model
 from app.core.config import settings
 from app.repositories.analysis import AnalysisRepository
@@ -67,6 +68,7 @@ def get_evaluation_service(
         HousingPlanRepository(session),
         EvaluationRepository(session),
         market_price_service,
+        create_interpretation_generator(create_ai_model(settings)),
     )
 
 

@@ -138,6 +138,17 @@ def evaluate_property(
     else:
         annual_status = "above_target"
 
+    if initial_status == "insufficient_initial_funds":
+        overall_financial_status = "initial_funds_shortfall"
+    elif initial_status == "emergency_fund_shortfall":
+        overall_financial_status = "emergency_fund_shortfall"
+    elif monthly_status != "sufficient":
+        overall_financial_status = monthly_status
+    elif annual_status == "below_target":
+        overall_financial_status = "annual_goal_shortfall"
+    else:
+        overall_financial_status = "all_satisfied"
+
     warnings: list[EvaluationWarning] = []
     if post_move_liquid_assets < 0:
         warnings.append(
@@ -156,16 +167,21 @@ def evaluate_property(
         memo=housing.memo,
         initial_funds=InitialFundsResult(
             available_cash=common.available_cash,
+            available_own_funds=available_own_funds,
             initial_cash_required=initial_cash_required,
             post_move_liquid_assets=post_move_liquid_assets,
+            minimum_emergency_fund=common.minimum_emergency_fund,
             emergency_fund_gap=emergency_fund_gap,
             status=initial_status,
         ),
         monthly_cash_flow=MonthlyCashFlowResult(
+            monthly_income=common.after_tax_monthly_income,
             monthly_housing_and_transport_cost=(
                 monthly_housing_and_transport_cost
             ),
             essential_monthly_outflow=essential_monthly_outflow,
+            base_monthly_balance=base_monthly_balance,
+            target_monthly_savings=common.target_monthly_savings,
             actual_monthly_balance=actual_monthly_balance,
             monthly_budget_margin=monthly_budget_margin,
             status=monthly_status,
@@ -179,6 +195,7 @@ def evaluate_property(
             annual_goal_achievement_rate=float(achievement_rate),
             status=annual_status,
         ),
+        overall_financial_status=overall_financial_status,
         calculation_details=CalculationDetails(
             available_own_funds=available_own_funds,
             initially_available_existing_deposit=(

@@ -36,8 +36,10 @@ class PropertyFinancialInput(BaseModel):
 
 class InitialFundsResult(BaseModel):
     available_cash: int
+    available_own_funds: int
     initial_cash_required: int
     post_move_liquid_assets: int
+    minimum_emergency_fund: int
     emergency_fund_gap: int
     status: Literal[
         "insufficient_initial_funds",
@@ -47,8 +49,11 @@ class InitialFundsResult(BaseModel):
 
 
 class MonthlyCashFlowResult(BaseModel):
+    monthly_income: int
     monthly_housing_and_transport_cost: int
     essential_monthly_outflow: int
+    base_monthly_balance: int
+    target_monthly_savings: int
     actual_monthly_balance: int
     monthly_budget_margin: int
     status: Literal[
@@ -82,6 +87,29 @@ class EvaluationWarning(BaseModel):
     message: str
 
 
+class AIInsightCard(BaseModel):
+    title: str
+    detail: str
+
+
+class AIInterpretation(BaseModel):
+    summary: list[str] = Field(min_length=1, max_length=5)
+    strengths: AIInsightCard
+    burdens: AIInsightCard
+    things_to_check: AIInsightCard
+    evidence_count: int = Field(ge=1)
+    suggested_questions: list[str] = Field(min_length=1, max_length=5)
+
+
+class PropertyAIInterpretation(BaseModel):
+    property_id: UUID
+    interpretation: AIInterpretation
+
+
+class AIInterpretationBatch(BaseModel):
+    candidates: list[PropertyAIInterpretation]
+
+
 class PriceComparableSample(BaseModel):
     name: str | None = None
     address: str | None = None
@@ -90,6 +118,13 @@ class PriceComparableSample(BaseModel):
     exclusive_area_m2: float
     contract_date: date
     equivalent_monthly_cost: int
+
+
+class PriceComparisonCriteria(BaseModel):
+    lookback_months: int
+    district_name: str
+    property_type: str
+    area_tolerance_percent: float
 
 
 class PriceAppropriatenessResult(BaseModel):
@@ -101,6 +136,7 @@ class PriceAppropriatenessResult(BaseModel):
     difference_rate_from_median: float | None = None
     price_percentile: float | None = None
     candidate_equivalent_monthly_cost: int | None = None
+    comparison_criteria: PriceComparisonCriteria | None = None
     samples: list[PriceComparableSample] = Field(default_factory=list)
     reason: str | None = None
 
@@ -112,12 +148,23 @@ class PropertyFinancialEvaluation(BaseModel):
     initial_funds: InitialFundsResult
     monthly_cash_flow: MonthlyCashFlowResult
     annual_goal: AnnualGoalResult
+    overall_financial_status: Literal[
+        "all_satisfied",
+        "initial_funds_shortfall",
+        "emergency_fund_shortfall",
+        "essential_expense_deficit",
+        "savings_target_shortfall",
+        "safety_margin_shortfall",
+        "annual_goal_shortfall",
+    ]
     price_appropriateness: PriceAppropriatenessResult | None = None
+    ai_interpretation: AIInterpretation | None = None
     calculation_details: CalculationDetails
     warnings: list[EvaluationWarning]
 
 
 class FinancialEvaluationResult(BaseModel):
+    result_version: Literal[3] = 3
     analysis_id: UUID
     candidates: list[PropertyFinancialEvaluation]
     generated_at: datetime
