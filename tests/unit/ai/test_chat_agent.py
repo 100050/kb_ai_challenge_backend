@@ -77,7 +77,7 @@ def test_input_update_regenerates_evaluation() -> None:
         "evaluation_status": "completed",
         "evaluation_progress": 100,
         "evaluation_result": {
-            "result_version": 6,
+            "result_version": 8,
             "analysis_id": str(ctx.deps.analysis_id),
             "candidates": [],
             "generated_at": result["evaluation_result"]["generated_at"],

@@ -479,7 +479,7 @@ data: {"status":"completed","stage":"financial_management","progress":100}
 
 ```json
 {
-  "result_version": 6,
+  "result_version": 8,
   "analysis_id": "550e8400-e29b-41d4-a716-446655440000",
   "candidates": [
     {
@@ -549,13 +549,7 @@ data: {"status":"completed","stage":"financial_management","progress":100}
         "things_to_check": {
           "title": "정성적 주거 조건 확인",
           "detail": "매물 메모의 역세권·엘리베이터·채광 정보를 현장에서 확인하세요."
-        },
-        "evidence_count": 6,
-        "suggested_questions": [
-          "왜 가격 부담이 높나요?",
-          "월세가 5만 원 오르면 어떻게 되나요?",
-          "다른 매물과 차이를 정리해줘"
-        ]
+        }
       },
       "calculation_details": {
         "available_own_funds": 75000000,
@@ -573,7 +567,7 @@ data: {"status":"completed","stage":"financial_management","progress":100}
 }
 ```
 
-`result_version`은 결과 화면 계약 버전입니다. 현재 버전은 `6`이며 이전
+`result_version`은 결과 화면 계약 버전입니다. 현재 버전은 `8`이며 이전
 형식으로 저장된 결과는 다음 분석 요청에서 자동으로 다시 계산합니다.
 
 결과는 매물마다 초기자금·유동성, 월 현금흐름, 1년 재무목표의 세 카드를 제공합니다.
@@ -610,8 +604,13 @@ data: {"status":"completed","stage":"financial_management","progress":100}
 계산하거나 계약·추천 여부를 결정하지 않습니다. AI 호출에 실패하면 해당
 값은 `null`이지만 가격 및 재무 분석 결과는 정상적으로 반환됩니다.
 저장된 결과의 가격 적정성을 24시간 후 갱신할 때 AI 종합 해설도 함께
-갱신합니다. `suggested_questions`는 기존 챗봇 메시지 API에 그대로 보낼
-수 있는 추천 질문입니다.
+갱신합니다.
+
+`strengths`, `burdens`, `things_to_check` 카드 구조는 유지하지만 카드
+문장은 고정 템플릿으로 조합하지 않습니다. AI가 상태, 경고와 근거 수치를
+함께 해석해 자연스러운 문장으로 생성합니다. 특히 음수 금액은 부호를
+그대로 노출하지 않고 부족액의 의미로 설명하며, `things_to_check`에는
+단순 지표 반복이 아니라 실제 확인 행동이나 계산 가정을 제공합니다.
 
 `sample_count`는 조회된 실거래 중 전용면적 허용 범위를 통과한 최종
 비교 표본 수입니다. 먼저 후보 매물 전용면적의 ±15% 범위로 비교하고,

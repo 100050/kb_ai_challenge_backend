@@ -75,14 +75,15 @@ class InterpretationGeneratorStub:
         return {
             str(self.property_id): AIInterpretation(
                 summary=["갱신된 종합 해설"],
-                strengths=AIInsightCard(title="장점", detail="상세"),
+                strengths=AIInsightCard(
+                    title="장점",
+                    detail="초기자금에는 여유가 있습니다.",
+                ),
                 burdens=AIInsightCard(title="부담", detail="상세"),
                 things_to_check=AIInsightCard(
                     title="확인할 점",
                     detail="상세",
                 ),
-                evidence_count=3,
-                suggested_questions=["왜 그런가요?"],
             ),
         }
 
@@ -96,7 +97,7 @@ def test_evaluate_returns_completed_evaluation_when_inputs_are_unchanged(
         status="completed",
         progress=100,
         result={
-            "result_version": 6,
+            "result_version": 8,
             "analysis_id": str(analysis.id),
             "candidates": [],
             "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -126,7 +127,7 @@ def test_evaluate_refreshes_only_price_after_twenty_four_hours() -> None:
         status="completed",
         progress=100,
         result={
-            "result_version": 6,
+            "result_version": 8,
             "analysis_id": str(analysis.id),
             "candidates": [
                 {
@@ -160,6 +161,6 @@ def test_evaluate_refreshes_only_price_after_twenty_four_hours() -> None:
     candidate = evaluation.result["candidates"][0]
     assert candidate["financial_marker"] == "must-stay-unchanged"
     assert candidate["price_appropriateness"]["reason"] == "refreshed"
-    assert candidate["ai_interpretation"]["summary"] == [
-        "갱신된 종합 해설",
-    ]
+    assert candidate["ai_interpretation"]["strengths"]["detail"] == (
+        "초기자금에는 여유가 있습니다."
+    )

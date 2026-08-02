@@ -98,8 +98,6 @@ class AIInterpretation(BaseModel):
     strengths: AIInsightCard
     burdens: AIInsightCard
     things_to_check: AIInsightCard
-    evidence_count: int = Field(ge=1)
-    suggested_questions: list[str] = Field(min_length=1, max_length=5)
 
 
 class PropertyAIInterpretation(BaseModel):
@@ -165,7 +163,7 @@ class PropertyFinancialEvaluation(BaseModel):
 
 
 class FinancialEvaluationResult(BaseModel):
-    result_version: Literal[6] = 6
+    result_version: Literal[8] = 8
     analysis_id: UUID
     candidates: list[PropertyFinancialEvaluation]
     generated_at: datetime
