@@ -1,92 +1,46 @@
-# KB Housing AI Backend
+# 가늠
+실거래 데이터와 개인 재무정보를 결합한 전월세 후보 비교 AI 에이전트
 
-청년 사용자가 후보 매물과 재무 정보를 비교하고 주거 의사결정을 내릴 수 있도록 지원하는 FastAPI 백엔드입니다. 개발 서버는 기본적으로 `http://localhost:8080`에서 실행하며 API 계약은 `Housing_AI_API_List.md`를 참고합니다.
+## 기술 스택
 
-## 요구 사항
+| 구분 | 기술 |
+| --- | --- |
+| Frontend | React 19, TypeScript, Vite |
+| Backend | FastAPI, Python 3.10+, Pydantic |
+| AI | Pydantic AI, OpenAI |
+| Database | PostgreSQL, SQLAlchemy, asyncpg |
+| Migration | Alembic |
+| Test | Pytest, Vitest, React Testing Library, MSW |
+| Infrastructure | Docker Compose, Vercel |
 
-- Python 3.10 이상
-- [uv](https://docs.astral.sh/uv/)
-- Docker 및 Docker Compose
+## 프로젝트가 하는 일
 
-PostgreSQL을 운영체제에 직접 설치할 필요는 없습니다. 로컬 DB는 `compose.yaml`의 PostgreSQL 컨테이너를 사용합니다.
+가늠은 청년 사용자가 자신의 재무 상태와 후보 주거지를 함께 비교해 주거 의사결정을 내릴 수 있도록 돕는 서비스입니다.
 
-## 로컬 실행
+- 월 소득과 생활비를 바탕으로 현재 현금 흐름을 정리합니다.
+- 보유 자산, 비상자금, 저축 목표를 반영해 가용 자금을 계산합니다.
+- 전세·월세 후보 매물의 보증금, 대출, 이자 및 추가 비용을 비교합니다.
+- 초기 자금, 월 현금 흐름, 1년 재무 목표 관점에서 매물별 결과를 제공합니다.
+- 계산 결과와 승인된 데이터를 바탕으로 AI 후속 상담을 제공합니다.
 
-저장소 루트가 아닌 `backend/`에서 다음 명령을 실행합니다.
+## 화면
 
-```bash
-uv sync
-cp .env.example .env
-docker compose up -d db
-docker compose ps
-uv run fastapi dev main.py --port 8080
-```
+![메인 화면](img/image1.png)
+![입력 화면](img/image2.png)
+![결과 화면1](img/image3-1.png)
+![결과 화면2](img/image3-2.png)
+![결과 화면3](img/image3-3.png)
+![챗봇 화면](img/image4.png)
 
-서버가 실행되면 다음 주소를 확인합니다.
 
-- API: `http://localhost:8080`
-- Swagger UI: `http://localhost:8080/docs`
-- OpenAPI JSON: `http://localhost:8080/openapi.json`
+## 아키텍처
+![아키텍쳐](img/architecture.png)
 
-현재 애플리케이션에는 분석 입력, 후보 매물 CRUD, 재무평가 및 가격
-적정성 평가를 포함한 `/api/v1` 엔드포인트가 구현되어 있습니다.
+프론트엔드는 단계별 입력과 결과·상담 화면을 담당하고, FastAPI 백엔드는 요청 검증 후 서비스 계층에 처리를 위임합니다. 금융 수치는 AI가 아닌 결정론적 계산 로직에서 산출하며, AI는 저장된 분석 데이터와 계산 결과를 근거로 설명을 생성합니다. 데이터 접근은 Repository 계층으로 분리하고 PostgreSQL 스키마 변경은 Alembic으로 관리합니다.
 
-## PostgreSQL 초기화
+## 문제 해결 및 성능 개선
 
-최초 `docker compose up -d db` 실행 시 다음 기본값으로 데이터베이스와 사용자가 생성됩니다.
-
-| 항목 | 기본값 |
-|---|---|
-| Host | `localhost` |
-| Port | `5432` |
-| Database | `housing_ai` |
-| User | `housing_ai` |
-| Password | `.env`의 `POSTGRES_PASSWORD` |
-
-컨테이너 상태와 접속을 확인합니다.
-
-```bash
-docker compose ps
-docker compose exec db pg_isready -U housing_ai -d housing_ai
-docker compose exec db psql -U housing_ai -d housing_ai
-```
-
-`psql`을 종료하려면 `\q`를 입력합니다. DB를 중지해도 named volume에 데이터가 유지됩니다.
-
-```bash
-docker compose down
-```
-
-로컬 데이터를 완전히 삭제하고 새 DB로 초기화할 때만 다음 명령을 사용합니다.
-
-```bash
-docker compose down -v
-docker compose up -d db
-```
-
-`down -v`는 로컬 PostgreSQL 데이터를 복구할 수 없게 삭제하므로 필요한 데이터가 없는지 먼저 확인합니다.
-
-## 환경변수
-
-`.env.example`을 복사해 `.env`를 만들고 실제 비밀값은 커밋하지 않습니다.
-
-```env
-DATABASE_URL=postgresql+asyncpg://housing_ai:local_dev_password@localhost:5432/housing_ai
-AI_API_KEY=
-DATA_GO_KR_API_KEY=
-R_ONE_API_KEY=
-```
-
-운영에서는 `DATABASE_URL`을 AWS RDS PostgreSQL 주소로 교체합니다. Docker Compose는 로컬 개발에서만 사용합니다.
-
-## 스키마 마이그레이션
-
-SQLAlchemy, asyncpg, Alembic을 사용하며 모든 테이블 변경은 Alembic
-revision으로 관리합니다.
-
-```bash
-uv run alembic upgrade head
-uv run alembic revision --autogenerate -m "describe schema change"
-```
-
-애플리케이션 시작 시 임의로 테이블을 생성하지 말고, 로컬과 RDS에 동일한 migration을 적용합니다.
+| 문제 | 해결 방법 | 
+| --- | --- |
+| 분석 결과를 보여주는 과정에서 입력이 변하지 않았음에도 다시 처음부터 분석한다 | 각 분석 결과에 하나의 id를 부여해 sql에 저장 후 이전 입력에서 변한 것이 없다면 저장한 분석 결과를 반환한다 |
+| 매물이나 사용자 정보 입력을 할 때 다음 페이지로 넘기면 무조건 서버에 요청을 날려서 요청이 너무 많다 | 입력 정보가 바뀐 부분이 있을 때만 서버에 요청을 보낸다 |
